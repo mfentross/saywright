@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saywright – Create</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#141414;text-decoration:none}a:hover{color:#000}
+textarea::placeholder{color:#6B6B65}
+.scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EFEFEA; color: #141414; font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <div style="padding: 52px 20px 0; display: flex; align-items: center; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <div style="width: 14px; height: 14px; border-radius: 4px; background: {{accent}}"></div>
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.03em">saywright</span>
+    </div>
+    <button aria-label="Account" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+    </button>
+  </div>
+
+  <div style="padding: 28px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 38px; line-height: 1.02; letter-spacing: -0.03em">What app do you need today?</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #55554F">Say it or type it in your own words. Saywright builds a working app you can test before you decide to keep it.</p>
+  </div>
+
+  <div style="margin: 22px 20px 0; background: #FFFFFF; border: 1px solid #DADAD3; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+    <label for="idea" style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5C5C57">Your idea</label>
+    <textarea id="idea" placeholder="e.g. My flatmates and I keep forgetting to water the plants. Remind whoever's turn it is…" style="height: 88px; border: 0; outline: none; resize: none; padding: 0; font-family: 'Geist', sans-serif; font-size: 17px; line-height: 1.35; color: #141414; background: transparent"></textarea>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <button aria-label="Attach a sketch or screenshot" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <a href="Voice.dc.html" aria-label="Speak your idea" style="height: 56px; padding: 0 20px 0 16px; border-radius: 28px; background: {{accent}}; color: #141414; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path><path d="M19 11a7 7 0 0 1-14 0"></path><path d="M12 18v3"></path></svg>
+          Speak
+        </a>
+        <a href="Building.dc.html" aria-label="Build this app" style="width: 56px; height: 56px; border-radius: 28px; background: #141414; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 24px 0 0; display: flex; flex-direction: column; gap: 10px">
+    <span style="padding: 0 20px; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5C5C57">Or start from</span>
+    <div class="scroll" style="display: flex; gap: 8px; overflow-x: auto; padding: 0 20px; scrollbar-width: none">
+      <button style="flex: none; height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; font-family: 'Geist', sans-serif; font-size: 15px; cursor: pointer">Habit tracker</button>
+      <button style="flex: none; height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; font-family: 'Geist', sans-serif; font-size: 15px; cursor: pointer">Shared shopping list</button>
+      <button style="flex: none; height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; font-family: 'Geist', sans-serif; font-size: 15px; cursor: pointer">Booking page</button>
+      <button style="flex: none; height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; font-family: 'Geist', sans-serif; font-size: 15px; cursor: pointer">Workout timer</button>
+    </div>
+  </div>
+
+  <div style="padding: 24px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <span style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5C5C57">Pick up where you left off</span>
+    <a href="TestDrive.dc.html" style="background: #FFFFFF; border: 1px solid #DADAD3; border-radius: 20px; padding: 12px 14px; display: flex; align-items: center; gap: 12px">
+      <div style="width: 44px; height: 44px; border-radius: 12px; background: #2B2B28; color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+        <span style="font-weight: 600; font-size: 16px">Gym timer</span>
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: #5C5C57">Testing · version 2</span>
+      </div>
+      <span style="font-size: 14px; font-weight: 600">Continue</span>
+    </a>
+  </div>
+
+  <nav aria-label="Main" style="margin-top: auto; background: #FFFFFF; border-top: 1px solid #DADAD3; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px 8px 20px">
+    <a href="Main.dc.html" aria-current="page" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 600; color: #141414">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
+      Create
+    </a>
+    <a href="Library.dc.html" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; color: #5C5C57">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"></rect><rect x="13" y="4" width="7" height="7" rx="1.5"></rect><rect x="4" y="13" width="7" height="7" rx="1.5"></rect><rect x="13" y="13" width="7" height="7" rx="1.5"></rect></svg>
+      My apps
+    </a>
+    <a href="Main.dc.html" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 11px; color: #5C5C57">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>
+      Account
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF4F12","options":["#FF4F12","#FFB000","#7CDB5B"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF4F12' };
+  }
+}
+</script>
+</body>
+</html>

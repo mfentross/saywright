@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saywright – Keep your app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#141414;text-decoration:none}a:hover{color:#000}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EFEFEA; color: #141414; font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <div style="padding: 52px 20px 0; display: flex; justify-content: flex-end">
+    <a href="TestDrive.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+    </a>
+  </div>
+
+  <div style="padding: 4px 20px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px">
+    <div style="width: 68px; height: 68px; border-radius: 20px; background: #1F7A4D; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"></path></svg>
+    </div>
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 34px; line-height: 1.04; letter-spacing: -0.03em">Keep Thirsty running</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.4; color: #55554F">Built from your idea, tested by you. Saywright checks it, publishes it and runs it for you.</p>
+  </div>
+
+  <div role="radiogroup" aria-label="Plan" style="padding: 20px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <sc-for list="{{plans}}" as="plan" hint-placeholder-count="2">
+      <button role="radio" aria-checked="{{plan.checked}}" onClick="{{plan.pick}}" style="{{plan.style}}">
+        <span style="{{plan.dot}}"></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; text-align: left">
+          <span style="display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 16px; color: #141414">
+            <span>{{plan.name}}</span>
+            <span>{{plan.price}}</span>
+          </span>
+          <span style="font-size: 14px; line-height: 1.4; color: #55554F">{{plan.desc}}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="padding: 20px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <span style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #5C5C57">Always included</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; font-size: 14px; line-height: 1.3">
+      <span style="display: flex; gap: 8px; align-items: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>A finished app, not code</span>
+      <span style="display: flex; gap: 8px; align-items: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Checked and published by Saywright</span>
+      <span style="display: flex; gap: 8px; align-items: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>50 active people a month, then pay as you grow</span>
+      <span style="display: flex; gap: 8px; align-items: flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Export your data</span>
+    </div>
+  </div>
+
+  <div style="margin-top: auto; padding: 0 20px 32px; display: flex; flex-direction: column; gap: 12px">
+    <a href="Delivery.dc.html" style="height: 56px; border-radius: 28px; background: #141414; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 17px">{{cta}}</a>
+    <a href="TestDrive.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px">Not yet, keep testing</a>
+    <span style="text-align: center; font-size: 13px; color: #55554F">Testing is free. Usage beyond the plan only with your OK, up to a cap you set.</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF4F12","options":["#FF4F12","#FFB000","#7CDB5B"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { plan: 'own' };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#FF4F12';
+    const list = [
+      { id: 'own', name: 'Keep it', price: '€4.99 / month', desc: 'This version, live on your phone, the web and the stores. Saywright hosts it and keeps it working.', cta: 'Start · €4.99 / month' },
+      { id: 'plus', name: 'Keep it + changes', price: '€9.99 / month', desc: 'Everything in Keep it, plus reshape it by voice or text whenever you like.', cta: 'Start · €9.99 / month' }
+    ];
+    const card = 'width: 100%; box-sizing: border-box; display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 20px; background: #FFFFFF; font-family: \'Geist\', sans-serif; cursor: pointer; ';
+    const plans = list.map((p) => {
+      const on = this.state.plan === p.id;
+      return {
+        name: p.name,
+        price: p.price,
+        desc: p.desc,
+        checked: on ? 'true' : 'false',
+        style: card + (on ? 'border: 2px solid #141414; padding: 15px;' : 'border: 1px solid #DADAD3;'),
+        dot: 'flex: none; width: 22px; height: 22px; box-sizing: border-box; border-radius: 11px; margin-top: 1px; ' + (on ? 'border: 7px solid #141414; background: ' + accent + ';' : 'border: 2px solid #9A9A93; background: #FFFFFF;'),
+        pick: () => this.setState({ plan: p.id })
+      };
+    });
+    const current = list.find((p) => p.id === this.state.plan) || list[0];
+    return { accent, plans, cta: current.cta };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Saywright – Test drive</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#141414;text-decoration:none}a:hover{color:#000}
+input::placeholder{color:#6B6B65}
+.scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #EFEFEA; color: #141414; font-family: 'Geist', system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+  <div style="padding: 52px 20px 0; display: flex; align-items: center; justify-content: space-between">
+    <a href="Building.dc.html" aria-label="Back to builder" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px">
+      <span style="font-weight: 600; font-size: 17px">Thirsty</span>
+      <span style="font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; background: #141414; color: #FFFFFF; padding: 3px 8px; border-radius: 6px">Test drive · v1</span>
+    </div>
+    <button onClick="{{reset}}" aria-label="Reset test data" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #D4D4CC; background: #FFFFFF; color: #141414; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6"></path><path d="M4 4v4h4"></path></svg>
+    </button>
+  </div>
+
+  <div style="margin: 16px 20px 0; height: 432px; box-sizing: border-box; border: 6px solid #141414; border-radius: 34px; background: #F2F7EF; overflow: hidden; display: flex; flex-direction: column; position: relative">
+    <a href="FullscreenTest.dc.html" aria-label="Test fullscreen" style="position: absolute; top: 34px; right: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center">
+      <span style="width: 32px; height: 32px; border-radius: 16px; background: #141414; color: #FFFFFF; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"></path><path d="M10 20H4v-6"></path><path d="M20 4l-7 7"></path><path d="M4 20l7-7"></path></svg>
+      </span>
+    </a>
+    <div style="background: #DDEBD6; color: #1E4D33; font-family: 'Geist Mono', monospace; font-size: 11px; text-align: center; padding: 7px 0">Sample data · nothing is saved</div>
+    <div style="padding: 16px 16px 0; display: flex; flex-direction: column; gap: 2px">
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.02em; color: #12301F">Plants</span>
+      <span style="font-size: 13px; color: #3F5E4B">{{summary}}</span>
+    </div>
+    <div style="padding: 12px 12px 0; display: flex; flex-direction: column; gap: 8px">
+      <sc-for list="{{plants}}" as="p" hint-placeholder-count="3">
+        <div style="background: #FFFFFF; border-radius: 16px; padding: 10px 10px 10px 12px; display: flex; align-items: center; gap: 10px">
+          <div style="width: 38px; height: 38px; border-radius: 12px; background: #CFE5C6; color: #1F7A4D; display: flex; align-items: center; justify-content: center; flex: none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"></path><path d="M12 11c0-4 3-6 7-6 0 4-3 6-7 6z"></path><path d="M12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0">
+            <span style="font-weight: 600; font-size: 15px; color: #12301F">{{p.name}}</span>
+            <span style="font-size: 12px; color: #3F5E4B">{{p.status}}</span>
+          </div>
+          <sc-if value="{{p.due}}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{p.water}}" style="flex: none; height: 36px; padding: 0 12px; border-radius: 18px; border: 0; background: #1F7A4D; color: #FFFFFF; font-family: 'Geist', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer">Watered</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="margin-top: auto; background: #FFFFFF; border-top: 1px solid #DCE7D6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 8px 0 10px; font-size: 11px; color: #3F5E4B; text-align: center">
+      <span style="font-weight: 600; color: #1F7A4D">Plants</span>
+      <span>Schedule</span>
+      <span>Flatmates</span>
+    </div>
+  </div>
+
+  <div style="padding: 16px 20px 0; display: flex; flex-direction: column; gap: 10px">
+    <div style="height: 52px; box-sizing: border-box; border-radius: 26px; background: #FFFFFF; border: 1px solid #DADAD3; display: flex; align-items: center; padding: 0 4px 0 18px; gap: 8px">
+      <label for="tweak" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Tell Saywright what to change</label>
+      <input id="tweak" placeholder="Tell Saywright what to change…" style="flex-grow: 1; min-width: 0; border: 0; outline: none; background: transparent; font-family: 'Geist', sans-serif; font-size: 16px; color: #141414">
+      <a href="Voice.dc.html" aria-label="Speak a change" style="width: 44px; height: 44px; border-radius: 22px; background: {{accent}}; color: #141414; display: flex; align-items: center; justify-content: center; flex: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path><path d="M19 11a7 7 0 0 1-14 0"></path><path d="M12 18v3"></path></svg>
+      </a>
+    </div>
+    <div class="scroll" style="display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -20px; padding: 0 20px">
+      <button style="flex: none; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid #D4D4CC; background: transparent; color: #141414; font-family: 'Geist', sans-serif; font-size: 14px; cursor: pointer">Add plant photos</button>
+      <button style="flex: none; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid #D4D4CC; background: transparent; color: #141414; font-family: 'Geist', sans-serif; font-size: 14px; cursor: pointer">Remind at 8 am</button>
+      <button style="flex: none; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid #D4D4CC; background: transparent; color: #141414; font-family: 'Geist', sans-serif; font-size: 14px; cursor: pointer">Darker look</button>
+    </div>
+  </div>
+
+  <div style="margin-top: auto; background: #FFFFFF; border-top: 1px solid #DADAD3; padding: 14px 20px 30px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #55554F">Like it?</span>
+      <span style="font-weight: 600; font-size: 16px">Keep it from €4.99 / month</span>
+    </div>
+    <a href="Purchase.dc.html" style="height: 52px; padding: 0 22px; border-radius: 26px; background: {{accent}}; color: #141414; display: flex; align-items: center; font-weight: 600; font-size: 16px">Keep this app</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF4F12","options":["#FF4F12","#FFB000","#7CDB5B"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { watered: {} };
+  }
+  renderVals() {
+    const seed = [
+      { id: 'm', name: 'Monstera', due: 'Water today · Lea’s turn' },
+      { id: 'p', name: 'Pilea', due: 'Water today · your turn' },
+      { id: 'f', name: 'Fern', done: 'Watered today by Jonas' },
+      { id: 'b', name: 'Basil', done: 'Next in 2 days · Jonas' }
+    ];
+    const w = this.state.watered;
+    const plants = seed.map((s) => {
+      const isDue = !!s.due && !w[s.id];
+      return {
+        name: s.name,
+        due: isDue,
+        status: s.due ? (w[s.id] ? 'Watered just now by you · next turn: Jonas' : s.due) : s.done,
+        water: () => this.setState({ watered: Object.assign({}, w, { [s.id]: true }) })
+      };
+    });
+    const left = plants.filter((p) => p.due).length;
+    return {
+      accent: this.props.accent ?? '#FF4F12',
+      plants,
+      summary: left === 0 ? 'All watered. Nice work, flat.' : (left === 1 ? '1 plant needs water today' : left + ' plants need water today'),
+      reset: () => this.setState({ watered: {} })
+    };
+  }
+}
+</script>
+</body>
+</html>
