@@ -3,3 +3,5 @@ export type { GenerationState, GenerationGraph, ProgressEvent, Plan, Verdict, Us
 export { createModel, modelSpec, DEFAULT_MODELS, PRICES, type ModelFactory, type Role, type ModelSpec } from './models';
 export { parseJsonObject, textOf } from './json';
 export { LibsqlSaver } from './checkpointer';
+export { buildChangeGraph, runChange, CHANGE_STEP_LABELS, type ChangeGraph, type ChangeState, type ChangeEvent } from './change';
+export { applyPatch, isPatch, PatchError, type PatchOp } from './patch';

@@ -35,6 +35,30 @@ export function fakeModels(): ModelFactory {
         },
       } as unknown as BaseChatModel;
     }
-    return new FakeListChatModel({ responses: [role === 'plan' ? plan : JSON.stringify(thirsty)], sleep: 600 }) as unknown as BaseChatModel;
+    if (role === 'write') {
+      return {
+        invoke: async (messages: BaseMessage[]) => {
+          await new Promise((r) => setTimeout(r, 800));
+          const all = messages.map((m) => String(m.content)).join('\n');
+          if (!all.includes('You change existing Saywright app blueprints')) return new AIMessage(JSON.stringify(thirsty));
+          const request = (all.match(/<request>\n([\s\S]*?)\n<\/request>/)?.[1] ?? '').toLowerCase();
+          const patch = request.includes('dark')
+            ? [
+                { op: 'replace', path: '/theme/background', value: '#14241B' },
+                { op: 'replace', path: '/theme/surface', value: '#1F3328' },
+                { op: 'replace', path: '/theme/ink', value: '#EAF4EC' },
+                { op: 'replace', path: '/theme/muted', value: '#A9C2B1' },
+                { op: 'replace', path: '/theme/tint', value: '#2C4A38' },
+                { op: 'replace', path: '/theme/line', value: '#2C4A38' },
+              ]
+            : request.includes('8')
+              ? [{ op: 'replace', path: '/notifications/0/at', value: '08:00' }]
+              : [{ op: 'replace', path: '/tagline', value: request.slice(0, 60) || 'Changed' }];
+          const summary = request.includes('dark') ? 'Darker look' : request.includes('8') ? 'Reminders at 8 am' : 'Updated the tagline';
+          return new AIMessage(JSON.stringify({ summary, patch }));
+        },
+      } as unknown as BaseChatModel;
+    }
+    return new FakeListChatModel({ responses: [plan], sleep: 600 }) as unknown as BaseChatModel;
   };
 }

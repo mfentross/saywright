@@ -28,7 +28,8 @@ pnpm typecheck
 pnpm client        # Expo dev server (press i / a / w)
 pnpm client:web    # web only
 pnpm server        # Fastify on :8080 (real AI: needs ANTHROPIC_API_KEY)
-SAYWRIGHT_FAKE_AI=1 pnpm server   # scripted fake AI, free (dev only)
+SAYWRIGHT_FAKE_AI=1 SAYWRIGHT_DEV_LOGIN=1 pnpm server   # scripted fake AI + sign-in without email, free (dev only)
+pnpm --filter @saywright/server worker                  # sw-worker, when the API runs with SAYWRIGHT_WORKER=none
 ```
 
 Point the app at a server with `EXPO_PUBLIC_API_URL=http://localhost:8080`; without it the app runs in demo mode.
@@ -43,6 +44,10 @@ Server configuration:
 | `SAYWRIGHT_MODEL_<STEP>` | `anthropic:claude-opus-5-5` | `SCREEN`, `PLAN`, `WRITE`; any LangChain provider:model |
 | `SAYWRIGHT_EFFORT_<STEP>` | low / medium / medium | Anthropic effort per step |
 | `CORS_ORIGINS` | localhost dev ports | comma-separated |
+| `SAYWRIGHT_WORKER` | `inline` | `none` in production: builds run in sw-worker |
+| `SAYWRIGHT_APP_URL` | `http://localhost:8081` | base of sign-in links in emails |
+| `SAYWRIGHT_FREE_APPS_PER_MONTH` / `_CHANGES_PER_MONTH` | 3 / 30 | free-tier limits |
+| `SAYWRIGHT_DAILY_AI_CAP_USD` | 3 | hard daily AI cost cap per account |
 
 AI evaluation (spends real money; needs `ANTHROPIC_API_KEY`):
 
@@ -64,9 +69,12 @@ Real:
   clarifying question + answer, versions
 - AI pipeline (LangGraph) with a libSQL checkpointer, so paused builds survive restarts
 - Building screen follows a live build (set `EXPO_PUBLIC_API_URL`)
+- Change requests from Test drive: AI edits the blueprint (JSON Patch), checked and stored as a new version
+- Jobs queue: the API enqueues, sw-worker runs builds/changes with leases (crash-safe)
+- Email sign-in links, hashed session tokens, projects owned by accounts, free-tier limits and a daily AI cost cap
 
 Stubbed (see `apps/client/src/services/stubs.ts`):
 - Voice (phase 4: on-device speech recognition),
   payments (phase 5: RevenueCat / Stripe), delivery and review (phase 6–7)
-- No accounts or deployment yet; builds run inside sw-api (sw-worker later)
-- Change requests ("Tell Saywright what to change") are not wired up yet
+- Sign-in emails are logged, not sent (no mail provider yet); Apple/Google/passkey sign-in not yet
+- Not deployed yet

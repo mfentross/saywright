@@ -52,6 +52,49 @@ const MIGRATIONS: string[][] = [
     )`,
     `CREATE INDEX ai_usage_project ON ai_usage (project_id)`,
   ],
+  [
+    // Job queue (API enqueues, sw-worker runs).
+    `CREATE TABLE jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      worker TEXT,
+      lease_until INTEGER,
+      error TEXT,
+      created_at INTEGER NOT NULL,
+      started_at INTEGER,
+      finished_at INTEGER
+    )`,
+    `CREATE INDEX jobs_runnable ON jobs (status, id)`,
+    `CREATE INDEX jobs_project ON jobs (project_id, status)`,
+    // Accounts: email sign-in links and sessions. Only hashes of tokens are stored.
+    `CREATE TABLE users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE login_links (
+      token_hash TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      used_at INTEGER,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE INDEX login_links_email ON login_links (email, created_at)`,
+    `CREATE TABLE sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    // Which pipeline run (graph thread) the usage belongs to.
+    `ALTER TABLE ai_usage ADD COLUMN thread TEXT`,
+    `ALTER TABLE projects ADD COLUMN owner_id TEXT`,
+    `CREATE INDEX projects_owner ON projects (owner_id, created_at)`,
+  ],
 ];
 
 export async function migrate(db: Client): Promise<void> {

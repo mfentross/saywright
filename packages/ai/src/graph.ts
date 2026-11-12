@@ -60,7 +60,7 @@ const State = Annotation.Root({
 
 export type GenerationState = typeof State.State;
 
-function usageOf(role: UsageEntry['role'], msg: AIMessage): UsageEntry {
+export function usageOf(role: UsageEntry['role'], msg: AIMessage): UsageEntry {
   const u = msg.usage_metadata;
   const details = (u?.input_token_details ?? {}) as { cache_read?: number; cache_creation?: number };
   const meta = (msg.response_metadata ?? {}) as { model?: string; model_name?: string };
@@ -74,7 +74,7 @@ function usageOf(role: UsageEntry['role'], msg: AIMessage): UsageEntry {
   };
 }
 
-function refused(msg: AIMessage): Verdict | null {
+export function refused(msg: AIMessage): Verdict | null {
   const meta = (msg.response_metadata ?? {}) as { stop_reason?: string; stop_details?: { category?: string | null } };
   if (meta.stop_reason !== 'refusal') return null;
   return {
@@ -84,7 +84,7 @@ function refused(msg: AIMessage): Verdict | null {
   };
 }
 
-function parseVerdict(text: string): Verdict {
+export function parseVerdict(text: string): Verdict {
   const v = parseJsonObject(text) as Partial<Verdict> | null;
   // Fail closed: anything unparseable counts as declined.
   if (!v || typeof v.allowed !== 'boolean') {

@@ -9,6 +9,8 @@ import { changeSuggestions } from '../data/mock';
 import { color, font, space } from '../theme/tokens';
 import { useTopPad } from '../theme/layout';
 import { PillButton } from '../components/ui';
+import { useChange } from '../data/useChange';
+import { useFlow } from '../data/store';
 
 export default function TestDrive() {
   const top = useTopPad();
@@ -18,6 +20,9 @@ export default function TestDrive() {
   const viewing = people.find((p) => p.id === state.viewAs);
   const nextPerson = people[(people.findIndex((p) => p.id === state.viewAs) + 1) % people.length]!;
   const daysAhead = Math.round(state.clockOffset / 86_400_000);
+  const change = useChange();
+  const { project } = useFlow();
+  const changing = change.status === 'changing';
 
   return (
     <View style={{ flex: 1, backgroundColor: color.ground, paddingTop: top }}>
@@ -25,7 +30,7 @@ export default function TestDrive() {
         backLabel="Back to builder"
         onBack={() => router.replace('/building')}
         title={sb.blueprint.name}
-        subtitle={<Tag>Test drive · v1</Tag>}
+        subtitle={<Tag>{`Test drive · v${project?.version ?? 1}`}</Tag>}
         right={<IconButton icon="reset" label="Reset test data" onPress={() => sb.reset()} />}
       />
 
@@ -80,14 +85,30 @@ export default function TestDrive() {
 
       <View style={{ paddingTop: 12, gap: 10 }}>
         <View style={{ paddingHorizontal: space.side }}>
-          <InputBar placeholder="Tell Saywright what to change…" />
+          <InputBar placeholder={changing ? 'Changing…' : 'Tell Saywright what to change…'} onSubmit={(t) => !changing && change.request(t)} />
         </View>
         <ChipRow>
           {changeSuggestions.map((c) => (
-            <Chip key={c} label={c} height={40} transparent />
+            <Chip key={c} label={c} height={40} transparent onPress={() => !changing && change.request(c)} />
           ))}
         </ChipRow>
       </View>
+
+      {change.step || change.message ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{
+            marginHorizontal: space.side,
+            marginTop: 10,
+            fontFamily: change.status === 'done' ? font.semibold : font.body,
+            fontSize: 14,
+            lineHeight: 20,
+            color: change.status === 'done' ? '#1E6A43' : color.ink,
+          }}
+        >
+          {change.step ? `${change.step}…` : change.message}
+        </Text>
+      ) : null}
 
       <View style={{ flex: 1 }} />
       <Footer style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

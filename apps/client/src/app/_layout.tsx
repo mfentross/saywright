@@ -8,8 +8,10 @@ import { BricolageGrotesque_500Medium, BricolageGrotesque_700Bold } from '@expo-
 import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold } from '@expo-google-fonts/geist';
 import { GeistMono_400Regular, GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
 import { color } from '../theme/tokens';
+import { session } from '../services/session';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+void session.load();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({

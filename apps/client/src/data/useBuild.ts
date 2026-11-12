@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_URL, answerQuestion, createProject, fetchBlueprint, projectEvents, type ServerEvent } from '../services/api';
 import { loadBlueprint } from './sandbox';
+import { flow } from './store';
+import { useSession } from '../services/session';
+import { ApiError } from '../services/api';
 import { plan as demoPlan } from './mock';
 
-export type BuildStatus = 'building' | 'question' | 'ready' | 'declined' | 'failed';
+export type BuildStatus = 'signin' | 'building' | 'question' | 'ready' | 'declined' | 'failed';
 
 export interface BuildPlan {
   name: string;
@@ -78,8 +81,9 @@ export function useBuild(idea: string) {
           setState((s) => ({ ...s, status: 'question', question: { text: e.text, options: e.options } }));
           break;
         case 'ready': {
-          const { blueprint } = await fetchBlueprint(id);
+          const { blueprint, version } = await fetchBlueprint(id);
           loadBlueprint(blueprint);
+          flow.set({ project: { id, version, seq: lastSeq.current } });
           setState((s) => ({ ...s, status: 'ready' }));
           break;
         }
@@ -93,16 +97,24 @@ export function useBuild(idea: string) {
     }
   }, []);
 
+  const auth = useSession();
   useEffect(() => {
-    if (!liveMode || started.current) return;
+    if (!liveMode || started.current || !auth.loaded) return;
+    if (!auth.token) {
+      setState((s) => ({ ...s, status: 'signin' }));
+      return;
+    }
     started.current = true;
+    setState((s) => ({ ...s, status: 'building' }));
     createProject(idea.trim())
       .then((id) => {
         project.current = id;
         return follow(id);
       })
-      .catch(() => setState((s) => ({ ...s, status: 'failed', message: 'Saywright couldn’t start building. Please try again.' })));
-  }, [idea, liveMode, follow]);
+      .catch((e) =>
+        setState((s) => ({ ...s, status: 'failed', message: e instanceof ApiError && e.status === 429 ? e.message : 'Saywright couldn’t start building. Please try again.' })),
+      );
+  }, [idea, liveMode, follow, auth.loaded, auth.token]);
 
   const answer = useCallback(
     async (option: string) => {

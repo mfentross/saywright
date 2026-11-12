@@ -9,6 +9,8 @@ interface FlowState {
   frequency: string;
   plan: PlanId;
   routes: Record<RouteId, boolean>;
+  /** The live project being tested (server mode). */
+  project: { id: string; version: number; seq: number } | null;
 }
 
 let state: FlowState = {
@@ -17,6 +19,7 @@ let state: FlowState = {
   frequency: 'Per plant',
   plan: 'own',
   routes: { phone: true, store: true, link: false },
+  project: null,
 };
 const listeners = new Set<() => void>();
 

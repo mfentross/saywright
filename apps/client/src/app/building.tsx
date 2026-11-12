@@ -23,7 +23,7 @@ export default function Building() {
   const progress = build.live ? (build.status === 'ready' ? 1 : Math.min(0.95, build.steps.length / 7)) : 0.85;
   const selected = build.live ? build.chosen : frequency;
   const subtitle = build.live
-    ? { building: 'Building…', question: 'Needs your answer', ready: 'Ready to test', declined: 'Can’t build this', failed: 'Something went wrong' }[build.status]
+    ? { signin: 'Sign in to build', building: 'Building…', question: 'Needs your answer', ready: 'Ready to test', declined: 'Can’t build this', failed: 'Something went wrong' }[build.status]
     : 'Building · step 4 of 4';
 
   return (
@@ -107,6 +107,16 @@ export default function Building() {
         </Card>
         ) : null}
 
+        {build.status === 'signin' ? (
+          <Card style={{ padding: 16, gap: 10 }}>
+            <Text style={{ fontFamily: font.semibold, fontSize: 15, color: color.ink }}>Sign in to build this app</Text>
+            <Text style={{ fontFamily: font.body, fontSize: 14, lineHeight: 20, color: color.muted }}>
+              Testing is free. Signing in keeps your apps together.
+            </Text>
+            <PillButton label="Sign in" variant="dark" height={44} onPress={() => router.push('/sign-in?next=/building')} />
+          </Card>
+        ) : null}
+
         {build.message ? (
           <Card style={{ padding: 16, gap: 6, borderColor: build.status === 'declined' ? color.ink : color.line }}>
             <Text style={{ fontFamily: font.semibold, fontSize: 15, color: color.ink }}>
@@ -143,7 +153,11 @@ export default function Building() {
           variant="dark"
           full
           disabled={build.status !== 'ready'}
-          onPress={() => router.push('/fullscreen')}
+          onPress={() => {
+            // Design flow: Building → fullscreen test → ✕ lands on Test drive.
+            router.push('/test-drive');
+            router.push('/fullscreen');
+          }}
         />
         <InputBar placeholder="Change something…" />
       </View>
