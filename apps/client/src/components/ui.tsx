@@ -273,6 +273,7 @@ export function Chip({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
+      aria-pressed={!!selected}
       onPress={onPress}
       style={({ pressed }) => ({
         height,
@@ -446,6 +447,7 @@ export function TabBar() {
             key={t.href}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
+            aria-selected={active}
             onPress={() => !active && router.replace(t.href)}
             style={{ flex: 1, height: 52, alignItems: 'center', justifyContent: 'center', gap: 4 }}
           >

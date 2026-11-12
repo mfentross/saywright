@@ -4,14 +4,30 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { thirsty, validateBlueprint } from '@saywright/blueprint';
+import type { Client } from '@libsql/client';
+import { validateBlueprint } from '@saywright/blueprint';
+import type { ModelFactory } from '@saywright/ai';
+import { migrate, openDb } from './db';
+import { GenerationService, TERMINAL, type BuildEvent } from './generation';
 
 /**
  * sw-api: Saywright's own API (accounts, projects, versions, build progress).
- * Phase 0 skeleton: in-memory projects, stubbed build stream, real blueprint validation.
+ * Projects are stored in libSQL; builds run the LangGraph generation pipeline.
  */
-export async function buildApp(opts: FastifyServerOptions = {}) {
-  const app = Fastify({ bodyLimit: 256 * 1024, ...opts }).withTypeProvider<ZodTypeProvider>();
+export interface AppOptions {
+  fastify?: FastifyServerOptions;
+  /** Database client; defaults to LIBSQL_URL or a local file. */
+  db?: Client;
+  /** AI models per pipeline step; defaults to the configured providers. */
+  models?: ModelFactory;
+}
+
+export async function buildApp(opts: AppOptions = {}) {
+  const app = Fastify({ bodyLimit: 256 * 1024, ...opts.fastify }).withTypeProvider<ZodTypeProvider>();
+  const db = opts.db ?? openDb();
+  await migrate(db);
+  const gen = new GenerationService(db, opts.models);
+  app.addHook('onClose', async () => db.close());
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
@@ -42,53 +58,93 @@ export async function buildApp(opts: FastifyServerOptions = {}) {
     },
   );
 
-  // ------------------------------------------------------------ projects (in-memory stub)
+  // ------------------------------------------------------------ projects
 
-  type Project = { id: string; idea: string; createdAt: number };
-  const projects = new Map<string, Project>();
+  const Id = z.object({ id: z.string().regex(/^p_[a-z0-9]{16}$/) });
+  const Project = z.object({
+    id: z.string(),
+    name: z.string().nullable(),
+    status: z.enum(['building', 'question', 'ready', 'declined', 'failed']),
+    question: z.object({ text: z.string(), options: z.array(z.string()) }).nullable(),
+  });
 
   app.post(
     '/projects',
     {
+      // Each build spends AI credits: keep this tight until accounts and quotas exist.
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
       schema: {
         body: z.object({ idea: z.string().trim().min(3).max(2000) }),
         response: { 201: z.object({ id: z.string() }) },
       },
     },
+    async (req, reply) => reply.code(201).send({ id: await gen.create(req.body.idea) }),
+  );
+
+  app.get('/projects/:id', { schema: { params: Id, response: { 200: Project, 404: z.object({ error: z.string() }) } } }, async (req, reply) => {
+    const p = await gen.get(req.params.id);
+    if (!p) return reply.code(404).send({ error: 'Not found' });
+    return { id: p.id, name: p.name, status: p.status, question: p.question };
+  });
+
+  app.post(
+    '/projects/:id/answer',
+    { schema: { params: Id, body: z.object({ answer: z.string().trim().min(1).max(200) }) } },
     async (req, reply) => {
-      // STUB: phase 3 runs the safety check + LangGraph pipeline in sw-worker.
-      const id = `p_${crypto.randomUUID().slice(0, 8)}`;
-      projects.set(id, { id, idea: req.body.idea, createdAt: Date.now() });
-      return reply.code(201).send({ id });
+      const r = await gen.answer(req.params.id, req.body.answer);
+      if (r === 'not-found') return reply.code(404).send({ error: 'Not found' });
+      if (r === 'not-waiting') return reply.code(409).send({ error: 'This app is not waiting for an answer' });
+      return reply.code(202).send({ ok: true });
     },
   );
 
-  app.get(
-    '/projects/:id/blueprint',
-    { schema: { params: z.object({ id: z.string().max(40) }) } },
-    async (req, reply) => {
-      if (!projects.has(req.params.id)) return reply.code(404).send({ error: 'Not found' });
-      return { version: 1, blueprint: thirsty }; // STUB: generated blueprint
-    },
-  );
+  app.get('/projects/:id/blueprint', { schema: { params: Id } }, async (req, reply) => {
+    const b = await gen.latestBlueprint(req.params.id);
+    if (!b) return reply.code(404).send({ error: 'Not found' });
+    return b;
+  });
 
-  /** Build progress as Server-Sent Events (drives the Building screen). */
+  /**
+   * Build progress as Server-Sent Events (drives the Building screen). Replays stored
+   * events after `after`, then streams live ones until the build pauses or ends.
+   */
   app.get(
     '/projects/:id/events',
-    { schema: { params: z.object({ id: z.string().max(40) }) } },
+    { schema: { params: Id, querystring: z.object({ after: z.coerce.number().int().min(0).default(0) }) } },
     async (req, reply) => {
-      if (!projects.has(req.params.id)) return reply.code(404).send({ error: 'Not found' });
+      const id = req.params.id;
+      if (!(await gen.get(id))) return reply.code(404).send({ error: 'Not found' });
+      // Writing to the raw socket skips Fastify's reply, so carry over the headers
+      // plugins have set (CORS, security headers) and take over the response.
+      reply.hijack();
       reply.raw.writeHead(200, {
+        ...(reply.getHeaders() as Record<string, string>),
         'content-type': 'text/event-stream',
         'cache-control': 'no-cache',
         connection: 'keep-alive',
+        'x-accel-buffering': 'no',
       });
-      const send = (event: unknown) => reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
-      const steps = ['Planned 3 screens', 'Designed the look', 'Wired up turns and reminders', 'Filling in sample data to test with'];
-      steps.forEach((label, index) => send({ type: 'step', index, label, done: true }));
-      send({ type: 'ready', projectId: req.params.id, version: 1 });
-      reply.raw.end();
-      return reply;
+      let last = req.query.after;
+      let closed = false;
+      const send = (e: { seq: number; event: BuildEvent }) => {
+        if (closed || e.seq <= last) return;
+        last = e.seq;
+        reply.raw.write(`id: ${e.seq}\nevent: ${e.event.type}\ndata: ${JSON.stringify(e.event)}\n\n`);
+        if (TERMINAL.has(e.event.type)) close();
+      };
+      const heartbeat = setInterval(() => !closed && reply.raw.write(': ping\n\n'), 15_000);
+      const unsubscribe = gen.subscribe(id, send);
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        unsubscribe();
+        reply.raw.end();
+      };
+      req.raw.on('close', close);
+      // Subscribe first, then replay, so nothing falls in between.
+      for (const e of await gen.events(id, last)) send(e);
+      if (!closed && !gen.isRunning(id)) close();
     },
   );
 

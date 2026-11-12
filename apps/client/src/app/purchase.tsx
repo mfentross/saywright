@@ -40,6 +40,7 @@ export default function Purchase() {
               key={p.id}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
+              aria-checked={on}
               accessibilityLabel={`${p.name}, ${p.price}. ${p.desc}`}
               onPress={() => flow.set({ plan: p.id })}
               style={{

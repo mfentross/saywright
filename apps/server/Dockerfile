@@ -5,6 +5,7 @@ WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/blueprint packages/blueprint
+COPY packages/ai packages/ai
 COPY apps/server apps/server
 RUN pnpm install --frozen-lockfile --filter @saywright/server...
 USER node

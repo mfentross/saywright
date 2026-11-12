@@ -44,7 +44,7 @@ export default function Voice() {
 
   const finish = async () => {
     const final = (await session?.stop()) ?? text;
-    flow.set({ idea: final.replace(/…$/, '.') });
+    flow.set({ idea: final.replace(/…$/, '.'), fromVoice: true });
     router.replace('/building');
   };
 

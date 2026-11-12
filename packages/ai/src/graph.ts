@@ -205,7 +205,7 @@ export type GenerationGraph = ReturnType<typeof buildGenerationGraph>;
 export const STEP_LABELS: Record<string, string> = {
   screen: 'Checked the idea',
   planner: 'Planned the screens',
-  ask: 'Got your answer',
+  ask: 'Settled the details',
   write: 'Wrote the app',
   check: 'Checked the app',
   review: 'Final safety check',
@@ -213,7 +213,7 @@ export const STEP_LABELS: Record<string, string> = {
 };
 
 export type ProgressEvent =
-  | { type: 'step'; node: string; label: string }
+  | { type: 'step'; node: string; label: string; update: Partial<GenerationState> }
   | { type: 'question'; text: string; options: string[] }
   | { type: 'done'; state: GenerationState };
 
@@ -234,7 +234,7 @@ export async function* runGeneration(
         const intr = (chunk as Record<string, Array<{ value: { question: { text: string; options: string[] } } }>>).__interrupt__?.[0];
         if (intr) yield { type: 'question', ...intr.value.question };
       } else {
-        yield { type: 'step', node, label: STEP_LABELS[node] ?? node };
+        yield { type: 'step', node, label: STEP_LABELS[node] ?? node, update: ((chunk as Record<string, unknown>)[node] ?? {}) as Partial<GenerationState> };
       }
     }
   }

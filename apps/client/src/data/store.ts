@@ -4,6 +4,8 @@ import type { PlanId, RouteId } from './mock';
 /** Tiny app-wide state for the click-through flow (replaced by server state in phase 2). */
 interface FlowState {
   idea: string;
+  /** The idea came from the Voice screen (shows the voice label in Building). */
+  fromVoice: boolean;
   frequency: string;
   plan: PlanId;
   routes: Record<RouteId, boolean>;
@@ -11,7 +13,8 @@ interface FlowState {
 
 let state: FlowState = {
   idea: '',
-  frequency: 'plant',
+  fromVoice: false,
+  frequency: 'Per plant',
   plan: 'own',
   routes: { phone: true, store: true, link: false },
 };

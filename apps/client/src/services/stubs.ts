@@ -2,45 +2,13 @@
  * Typed stubs for services that come in later phases. The screens call these, so
  * swapping in the real implementation doesn't touch the UI.
  *
- * - generation: phase 3 (LangGraph pipeline in sw-worker, progress via SSE)
  * - voice:      phase 4 (on-device speech recognition)
  * - payments:   phase 5 (RevenueCat in-app purchase / Stripe on web)
  * - delivery:   phase 6–7 (review gate, home screen, web link, stores)
  */
-import { thirsty, type BlueprintInput } from '@saywright/blueprint';
 import type { PlanId, RouteId } from '../data/mock';
 
-// ---------------------------------------------------------------- generation
-
-export type BuildEvent =
-  | { type: 'step'; index: number; label: string; done: boolean }
-  | { type: 'question'; id: string; text: string; options: Array<{ id: string; label: string }> }
-  | { type: 'ready'; projectId: string; version: number };
-
-export interface GenerationService {
-  /** Starts building from an idea; yields progress for the Building screen. */
-  build(idea: string): AsyncIterable<BuildEvent>;
-  answer(questionId: string, optionId: string): Promise<void>;
-  requestChange(projectId: string, request: string): Promise<{ version: number }>;
-  blueprint(projectId: string, version?: number): Promise<BlueprintInput>;
-}
-
-export const generation: GenerationService = {
-  async *build() {
-    // STUB: replaced by POST /projects + SSE /projects/:id/events (apps/server).
-    yield { type: 'ready', projectId: 'thirsty', version: 1 };
-  },
-  async answer() {
-    // STUB
-  },
-  async requestChange() {
-    // STUB
-    return { version: 2 };
-  },
-  async blueprint() {
-    return thirsty;
-  },
-};
+// Generation is real: see ./api.ts and ../data/useBuild.ts (demo mode without EXPO_PUBLIC_API_URL).
 
 // ---------------------------------------------------------------- voice
 

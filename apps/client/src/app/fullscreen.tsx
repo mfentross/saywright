@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, Player } from '@saywright/player';
-import { currentSandbox } from '../data/sandbox';
+import { useCurrentSandbox } from '../data/sandbox';
 import { color, font } from '../theme/tokens';
 import { goBack } from '../components/ui';
 
@@ -14,11 +14,12 @@ import { goBack } from '../components/ui';
 export default function FullscreenTest() {
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
+  const { sandbox, key } = useCurrentSandbox();
   const top = Math.max(insets.top, 12);
 
   return (
     <View style={{ flex: 1 }}>
-      <Player sandbox={currentSandbox} topInset={top} bottomInset={insets.bottom} />
+      <Player key={key} sandbox={sandbox} topInset={top} bottomInset={insets.bottom} />
 
       <Pressable
         accessibilityRole="button"

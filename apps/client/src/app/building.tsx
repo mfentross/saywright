@@ -5,15 +5,26 @@ import { Card, Chip, goBack, IconButton, IconTile, Mono, PillButton, Row } from 
 import { InputBar } from '../components/InputBar';
 import { color, font, space, tracking } from '../theme/tokens';
 import { useBottomPad, useTopPad } from '../theme/layout';
-import { frequencyOptions, plan, sampleIdea } from '../data/mock';
+import { sampleIdea } from '../data/mock';
 import { flow, useFlow } from '../data/store';
+import { useBuild } from '../data/useBuild';
 
 export default function Building() {
   const top = useTopPad();
   const bottom = useBottomPad(32);
-  const { idea, frequency } = useFlow();
+  const { idea, frequency, fromVoice } = useFlow();
+  const build = useBuild(idea);
   const prompt = idea.trim() || sampleIdea;
-  const lastStep = plan.steps.length - 1;
+  const plan = build.plan;
+  const building = build.status === 'building';
+  // Demo: the last step is "in progress"; live: a working line is added while building.
+  const steps = build.live ? (building ? [...build.steps, 'Working…'] : build.steps) : build.steps;
+  const currentStep = build.live ? (building ? steps.length - 1 : -1) : steps.length - 1;
+  const progress = build.live ? (build.status === 'ready' ? 1 : Math.min(0.95, build.steps.length / 7)) : 0.85;
+  const selected = build.live ? build.chosen : frequency;
+  const subtitle = build.live
+    ? { building: 'Building…', question: 'Needs your answer', ready: 'Ready to test', declined: 'Can’t build this', failed: 'Something went wrong' }[build.status]
+    : 'Building · step 4 of 4';
 
   return (
     <View style={{ flex: 1, backgroundColor: color.ground, paddingTop: top }}>
@@ -21,7 +32,7 @@ export default function Building() {
         <IconButton icon="back" label="Back" onPress={goBack} />
         <View style={{ gap: 2 }}>
           <Text style={{ fontFamily: font.semibold, fontSize: 17, color: color.ink }}>New app</Text>
-          <Mono>Building · step 4 of 4</Mono>
+          <Mono>{subtitle}</Mono>
         </View>
       </Row>
 
@@ -40,14 +51,19 @@ export default function Building() {
           }}
         >
           <Text style={{ fontFamily: font.body, fontSize: 15, lineHeight: 21, color: color.dark.text }}>{prompt}</Text>
-          <Row style={{ gap: 6 }}>
-            <Icon name="micSmall" size={12} color={color.dark.tertiary} strokeWidth={2} />
-            <Text style={{ fontFamily: font.mono, fontSize: 11, color: color.dark.tertiary }}>Voice · 0:14</Text>
-          </Row>
+          {fromVoice || !idea.trim() ? (
+            <Row style={{ gap: 6 }}>
+              <Icon name="micSmall" size={12} color={color.dark.tertiary} strokeWidth={2} />
+              <Text style={{ fontFamily: font.mono, fontSize: 11, color: color.dark.tertiary }}>Voice · 0:14</Text>
+            </Row>
+          ) : null}
         </View>
 
         {/* The generated plan */}
+        {plan || steps.length ? (
         <Card style={{ borderRadius: 24, padding: 16, gap: 14 }}>
+          {plan ? (
+          <>
           <Row style={{ gap: 12 }}>
             <IconTile icon="droplet" bg="#1F7A4D" fg="#FFFFFF" size={48} radius={14} iconSize={24} />
             <View style={{ gap: 2 }}>
@@ -65,11 +81,14 @@ export default function Building() {
             ))}
           </View>
 
-          <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: color.divider, paddingTop: 12 }} accessibilityLabel="Build progress">
-            {plan.steps.map((s, i) => {
-              const current = i === lastStep;
+          </>
+          ) : null}
+
+          <View style={[{ gap: 8 }, plan && { borderTopWidth: 1, borderTopColor: color.divider, paddingTop: 12 }]} accessibilityLabel="Build progress">
+            {steps.map((s, i) => {
+              const current = i === currentStep;
               return (
-                <Row key={s} style={{ gap: 10 }}>
+                <Row key={`${i}-${s}`} style={{ gap: 10 }}>
                   {current ? (
                     <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.accent, borderTopColor: color.ink }} />
                   ) : (
@@ -82,26 +101,50 @@ export default function Building() {
               );
             })}
             <View style={{ height: 6, borderRadius: 3, backgroundColor: color.divider, marginTop: 4, overflow: 'hidden' }}>
-              <View style={{ width: '85%', height: 6, borderRadius: 3, backgroundColor: color.accent }} />
+              <View style={{ width: `${Math.round(progress * 100)}%`, height: 6, borderRadius: 3, backgroundColor: color.accent }} />
             </View>
           </View>
         </Card>
+        ) : null}
+
+        {build.message ? (
+          <Card style={{ padding: 16, gap: 6, borderColor: build.status === 'declined' ? color.ink : color.line }}>
+            <Text style={{ fontFamily: font.semibold, fontSize: 15, color: color.ink }}>
+              {build.status === 'declined' ? 'Saywright can’t build this app' : 'Something went wrong'}
+            </Text>
+            <Text style={{ fontFamily: font.body, fontSize: 14, lineHeight: 20, color: color.muted }}>{build.message}</Text>
+          </Card>
+        ) : null}
 
         {/* Clarifying question */}
-        <View style={{ gap: 10 }}>
-          <Text style={{ fontFamily: font.body, fontSize: 15, lineHeight: 21, color: color.ink }}>
-            <Text style={{ fontFamily: font.semibold }}>Quick question:</Text> how often should it remind?
-          </Text>
-          <Row style={{ gap: 8, flexWrap: 'wrap' }}>
-            {frequencyOptions.map((o) => (
-              <Chip key={o.id} label={o.label} selected={frequency === o.id} onPress={() => flow.set({ frequency: o.id })} />
-            ))}
-          </Row>
-        </View>
+        {build.question ? (
+          <View style={{ gap: 10 }}>
+            <Text style={{ fontFamily: font.body, fontSize: 15, lineHeight: 21, color: color.ink }}>
+              <Text style={{ fontFamily: font.semibold }}>Quick question:</Text> {build.question.text}
+            </Text>
+            <Row style={{ gap: 8, flexWrap: 'wrap' }}>
+              {build.question.options.map((o) => (
+                <Chip
+                  key={o}
+                  label={o}
+                  selected={selected === o}
+                  onPress={() => (build.live ? build.answer(o) : flow.set({ frequency: o }))}
+                />
+              ))}
+            </Row>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={{ paddingHorizontal: space.side, paddingBottom: bottom, paddingTop: 8, gap: 12 }}>
-        <PillButton label="Open test drive" icon="play" variant="dark" full onPress={() => router.push('/fullscreen')} />
+        <PillButton
+          label="Open test drive"
+          icon="play"
+          variant="dark"
+          full
+          disabled={build.status !== 'ready'}
+          onPress={() => router.push('/fullscreen')}
+        />
         <InputBar placeholder="Change something…" />
       </View>
     </View>

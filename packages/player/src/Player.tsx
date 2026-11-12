@@ -103,6 +103,7 @@ export function Player({ sandbox, density = 'regular', topInset = 0, bottomInset
               key={sc.id}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
+              aria-selected={active}
               onPress={() => setScreenId(sc.id)}
               style={s.tab}
             >

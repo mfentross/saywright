@@ -26,7 +26,7 @@ export default function Create() {
         <SectionLabel>Your idea</SectionLabel>
         <TextInput
           value={idea}
-          onChangeText={(v) => flow.set({ idea: v })}
+          onChangeText={(v) => flow.set({ idea: v, fromVoice: false })}
           multiline
           placeholder="e.g. My flatmates and I keep forgetting to water the plants. Remind whoever's turn it is…"
           placeholderTextColor={color.placeholder}

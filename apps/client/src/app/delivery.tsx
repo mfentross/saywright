@@ -41,6 +41,7 @@ export default function Delivery() {
                 key={r.id}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: on }}
+                aria-checked={on}
                 accessibilityLabel={`${r.name}. ${r.desc}`}
                 onPress={() => flow.set({ routes: { ...picked, [r.id]: !on } })}
                 style={{

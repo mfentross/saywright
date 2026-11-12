@@ -20,12 +20,6 @@ export const plan = {
   steps: ['Planned 3 screens', 'Designed the look', 'Wired up turns and reminders', 'Filling in sample data to test with'],
 };
 
-export const frequencyOptions = [
-  { id: 'plant', label: 'Per plant' },
-  { id: 'daily', label: 'Daily' },
-  { id: 'two', label: 'Every 2 days' },
-] as const;
-
 export const changeSuggestions = ['Add plant photos', 'Remind at 8 am', 'Darker look'];
 
 export const plans = [

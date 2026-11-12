@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Icon, Player } from '@saywright/player';
 import { Chip, ChipRow, Footer, IconButton, Row, Tag, TopBar } from '../components/ui';
 import { InputBar } from '../components/InputBar';
-import { currentSandbox as sb } from '../data/sandbox';
+import { useCurrentSandbox } from '../data/sandbox';
 import { changeSuggestions } from '../data/mock';
 import { color, font, space } from '../theme/tokens';
 import { useTopPad } from '../theme/layout';
@@ -12,6 +12,7 @@ import { PillButton } from '../components/ui';
 
 export default function TestDrive() {
   const top = useTopPad();
+  const { sandbox: sb, key } = useCurrentSandbox();
   const state = useSyncExternalStore(sb.subscribe, sb.getState, sb.getState);
   const people = sb.blueprint.sample.people;
   const viewing = people.find((p) => p.id === state.viewAs);
@@ -42,6 +43,7 @@ export default function TestDrive() {
         }}
       >
         <Player
+          key={key}
           sandbox={sb}
           density="compact"
           banner={
