@@ -7,6 +7,7 @@ import {
   ExprError,
   thirsty,
   validateBlueprint,
+  smokeTest,
   type EvalHost,
 } from '../src';
 
@@ -158,5 +159,26 @@ describe('Thirsty in the sandbox', () => {
     sb.advance(2 * 24 * 3_600_000);
     expect(status(sb).Fern).toBe('Water today · Lea’s turn');
     expect(sb.getState().notices.map((n) => n.text)).toContain('Fern is thirsty. It’s your turn to water it.');
+  });
+});
+
+describe('smoke test', () => {
+  it('passes for Thirsty', () => {
+    expect(smokeTest(Blueprint.parse(thirsty))).toEqual([]);
+  });
+
+  it('catches titles that render empty because of a wrong field name', () => {
+    const bad = structuredClone(thirsty) as any;
+    bad.screens[0].blocks[2].item.title = '{{item.title}}';
+    const issues = smokeTest(Blueprint.parse(bad));
+    expect(issues.map((i) => i.path)).toContain('screens.0.blocks.2.item.title');
+  });
+
+  it('catches runaway expressions at runtime', () => {
+    const bad = structuredClone(thirsty) as any;
+    bad.collections.plants.computed.heavy = 'count(plants, count(plants, count(plants, count(plants, count(plants, it.due) > 0) > 0) > 0) > 0)';
+    for (let i = 0; i < 30; i++) bad.sample.records.plants.push({ id: `p${i}`, name: `P${i}`, everyDays: 3, lastWatered: '@now', lastWateredBy: 'lea', turn: 'lea' });
+    const issues = smokeTest(Blueprint.parse(bad));
+    expect(issues.some((i) => i.path === 'collections.plants.computed.heavy' && /step budget/.test(i.message))).toBe(true);
   });
 });

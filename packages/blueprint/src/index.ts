@@ -1,6 +1,7 @@
 export * from './schema';
 export * from './validate';
 export * from './sandbox';
+export * from './smoke';
 export {
   evaluate,
   renderTemplate,

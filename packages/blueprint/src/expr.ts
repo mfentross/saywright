@@ -21,6 +21,8 @@ export const LIMITS = {
   maxExpressionLength: 600,
   maxDepth: 40,
   stepBudget: 5_000,
+  /** Shared budget for computing all computed values of one list. */
+  collectionBudget: 50_000,
   maxStringLength: 2_000,
   maxListLength: 5_000,
 } as const;
@@ -239,9 +241,15 @@ export interface EvalHost {
   nextMember(id: Value): string | null;
 }
 
+/** A step counter that can be shared by several evaluations (e.g. all computed values of a list). */
+export interface Budget {
+  steps: number;
+  limit: number;
+}
+
 interface Ctx {
   host: EvalHost;
-  steps: number;
+  budget: Budget;
   locals: Record<string, Value>;
 }
 
@@ -249,7 +257,7 @@ const DAY = 86_400_000;
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function tick(ctx: Ctx) {
-  if (++ctx.steps > LIMITS.stepBudget) throw new BudgetExceeded();
+  if (++ctx.budget.steps > ctx.budget.limit) throw new BudgetExceeded();
 }
 
 function truthy(v: Value | undefined): boolean {
@@ -510,8 +518,8 @@ export function compile(src: string): Node {
   return node;
 }
 
-export function evaluate(src: string, host: EvalHost, locals: Record<string, Value> = {}): Value {
-  const ctx: Ctx = { host, steps: 0, locals };
+export function evaluate(src: string, host: EvalHost, locals: Record<string, Value> = {}, budget?: Budget): Value {
+  const ctx: Ctx = { host, budget: budget ?? { steps: 0, limit: LIMITS.stepBudget }, locals };
   return evalNode(compile(src), ctx);
 }
 

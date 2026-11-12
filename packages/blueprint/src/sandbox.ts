@@ -1,5 +1,5 @@
 import type { Blueprint } from './schema';
-import { evaluate, isTruthy, renderTemplate, type EvalHost, type Value } from './expr';
+import { evaluate, isTruthy, LIMITS, renderTemplate, type Budget, type EvalHost, type Value } from './expr';
 
 /**
  * The sandbox: an in-memory, sample-data-only runtime for a blueprint.
@@ -115,27 +115,44 @@ export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}):
 
   // Computed values may refer to other collections; guard against cycles.
   const computing = new Set<string>();
+  // Computed rows are cached per data state and clock second, so references to a list
+  // inside expressions don't recompute it (which would multiply the work).
+  let cacheState: SandboxState | null = null;
+  let cacheSecond = -1;
+  const cache = new Map<string, Array<Record<string, Value>>>();
   function rows(collection: string): Array<Record<string, Value>> {
+    const second = Math.floor(now() / 1000);
+    if (cacheState !== state || cacheSecond !== second) {
+      cache.clear();
+      cacheState = state;
+      cacheSecond = second;
+    }
+    const hit = cache.get(collection);
+    if (hit) return hit;
     const c = bp.collections[collection];
     const list = state.records[collection] ?? [];
     if (!c?.computed || computing.has(collection)) return list.map((r) => ({ ...r }));
     computing.add(collection);
+    // One budget for all computed values of this list.
+    const budget: Budget = { steps: 0, limit: LIMITS.collectionBudget };
     try {
-      return list.map((r) => {
+      const out = list.map((r) => {
         const item: Record<string, Value> = { ...r };
         for (const [k, src] of Object.entries(c.computed!)) {
-          item[k] = safeEval(src, { item });
+          item[k] = budget.steps >= budget.limit ? null : safeEval(src, { item }, budget);
         }
         return item;
       });
+      cache.set(collection, out);
+      return out;
     } finally {
       computing.delete(collection);
     }
   }
 
-  function safeEval(src: string, locals: Record<string, Value>): Value {
+  function safeEval(src: string, locals: Record<string, Value>, budget?: Budget): Value {
     try {
-      return evaluate(src, makeHost(locals), locals);
+      return evaluate(src, makeHost(locals), locals, budget);
     } catch {
       return null;
     }

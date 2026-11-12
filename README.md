@@ -14,6 +14,7 @@ apps/client         Expo + expo-router app (iOS, Android, Web): the 9 screens
 apps/server         Fastify API (sw-api skeleton), Dockerfile
 packages/blueprint  App blueprint schema, safe expression language, validator, sandbox, Thirsty example
 packages/player     React Native renderer for blueprints (also runs on web)
+packages/ai         LangGraph generation pipeline (idea → safety → plan → blueprint → check/repair → review), evals
 ```
 
 ## Getting started
@@ -27,6 +28,13 @@ pnpm typecheck
 pnpm client        # Expo dev server (press i / a / w)
 pnpm client:web    # web only
 pnpm server        # Fastify on :8080
+```
+
+AI evaluation (spends real money; needs `ANTHROPIC_API_KEY`):
+
+```bash
+pnpm --filter @saywright/ai eval                       # all ideas, stops at EVAL_BUDGET_USD (default 15)
+EVAL_DRY=1 pnpm --filter @saywright/ai eval            # scripted fake model, free
 ```
 
 ## What's real and what's stubbed (phase 0/1)
