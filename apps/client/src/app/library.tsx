@@ -5,6 +5,7 @@ import { Icon } from '@saywright/player';
 import { H1, IconTile, Mono, PillButton, Row, Screen, SectionLabel, TabBar } from '../components/ui';
 import { color, font, space } from '../theme/tokens';
 import { library } from '../data/mock';
+import { loadExample } from '../data/sandbox';
 
 export default function Library() {
   return (
@@ -43,7 +44,15 @@ export default function Library() {
         <SectionLabel>Live</SectionLabel>
         <Group>
           {library.live.map((a, i) => (
-            <AppRow key={a.name} first={i === 0} onPress={() => router.push('/test-drive')} label={`${a.name}, ${a.status}`}>
+            <AppRow
+              key={a.name}
+              first={i === 0}
+              onPress={() => {
+                if (a.name === 'Thirsty') loadExample('thirsty');
+                router.push('/test-drive');
+              }}
+              label={`${a.name}, ${a.status}`}
+            >
               <IconTile icon={a.icon} bg={a.bg} fg={a.fg} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={{ fontFamily: font.semibold, fontSize: 16, color: color.ink }}>{a.name}</Text>
@@ -58,10 +67,17 @@ export default function Library() {
       <View style={{ paddingHorizontal: space.side, paddingTop: 22, gap: 10 }}>
         <SectionLabel>Testing & building</SectionLabel>
         <Group>
-          <AppRow first onPress={() => router.push('/test-drive')} label="Gym timer, Testing · v2. Test">
+          <AppRow
+            first
+            onPress={() => {
+              loadExample('runclub');
+              router.push('/test-drive');
+            }}
+            label="Run Club, Testing · v2. Test"
+          >
             <IconTile icon="clock" bg="#2B2B28" fg="#FFFFFF" />
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ fontFamily: font.semibold, fontSize: 16, color: color.ink }}>Gym timer</Text>
+              <Text style={{ fontFamily: font.semibold, fontSize: 16, color: color.ink }}>Run Club</Text>
               <Mono>Testing · v2</Mono>
             </View>
             <Text style={{ fontFamily: font.semibold, fontSize: 14, color: color.ink }}>Test</Text>

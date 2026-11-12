@@ -25,7 +25,7 @@ export function fakeModels(): ModelFactory {
       // The pipeline only calls invoke(); look at the input to decide.
       return {
         invoke: async (messages: BaseMessage[]) => {
-          const text = messages.map((m) => String(m.content)).join(' ').toLowerCase();
+          const text = messages.map(contentText).join(' ').toLowerCase();
           await new Promise((r) => setTimeout(r, 400));
           return new AIMessage(
             text.includes('bank login')
@@ -39,7 +39,7 @@ export function fakeModels(): ModelFactory {
       return {
         invoke: async (messages: BaseMessage[]) => {
           await new Promise((r) => setTimeout(r, 800));
-          const all = messages.map((m) => String(m.content)).join('\n');
+          const all = messages.map(contentText).join('\n');
           if (!all.includes('You change existing Saywright app blueprints')) return new AIMessage(JSON.stringify(thirsty));
           const request = (all.match(/<request>\n([\s\S]*?)\n<\/request>/)?.[1] ?? '').toLowerCase();
           const patch = request.includes('dark')
@@ -61,4 +61,10 @@ export function fakeModels(): ModelFactory {
     }
     return new FakeListChatModel({ responses: [plan], sleep: 600 }) as unknown as BaseChatModel;
   };
+}
+
+/** Message text, whether content is a string or a list of content blocks. */
+function contentText(m: BaseMessage): string {
+  if (typeof m.content === 'string') return m.content;
+  return m.content.map((b) => (typeof b === 'string' ? b : 'text' in b ? String(b.text) : '')).join('');
 }

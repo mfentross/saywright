@@ -1,23 +1,13 @@
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import {
-  isTruthy,
-  type Block,
-  type Sandbox,
-  type Theme,
-  type Value,
-  type RecordValue,
-} from '@saywright/blueprint';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { Field, RecordValue, Sandbox, Screen, Value } from '@saywright/blueprint';
 import { Icon } from './Icon';
+import { BlockView, type BlockContext } from './blocks';
+import { FieldEditor } from './editors';
+import { PLAYER_FONTS } from './fonts';
+import { makeStyles, type Styles } from './styles';
 
-/** Font family names; the host app loads these (see apps/client/src/theme/fonts.ts). */
-export const PLAYER_FONTS = {
-  display: 'BricolageGrotesque_700Bold',
-  body: 'Geist_400Regular',
-  medium: 'Geist_500Medium',
-  semibold: 'Geist_600SemiBold',
-  mono: 'GeistMono_400Regular',
-} as const;
+export { PLAYER_FONTS } from './fonts';
 
 export type Density = 'regular' | 'compact';
 
@@ -31,6 +21,16 @@ export interface PlayerProps {
   bottomInset?: number;
   /** Rendered above the app content, e.g. the "Sample data" strip. */
   banner?: ReactNode;
+  /** Extra top space on screens without a header, for host controls (the fullscreen ✕). */
+  chromeTop?: number;
+}
+
+type RunOpts = { collection?: string; itemId?: string; form?: Record<string, RecordValue> };
+
+function defaultsFor(sc: Screen): Record<string, Value> {
+  return Object.fromEntries(
+    Object.entries(sc.state ?? {}).map(([k, st]) => [k, st.default ?? (st.type === 'bool' ? false : st.type === 'number' ? 0 : '')]),
+  );
 }
 
 /**
@@ -38,81 +38,140 @@ export interface PlayerProps {
  * The player has no access to the host app's session, storage or network:
  * everything it can do goes through the sandbox it is given.
  */
-export function Player({ sandbox, density = 'regular', topInset = 0, bottomInset = 0, banner }: PlayerProps) {
+export function Player({ sandbox, density = 'regular', topInset = 0, bottomInset = 0, banner, chromeTop = 0 }: PlayerProps) {
   const state = useSyncExternalStore(sandbox.subscribe, sandbox.getState, sandbox.getState);
   const bp = sandbox.blueprint;
   const t = bp.theme;
-  const [screenId, setScreenId] = useState(bp.screens[0]!.id);
-  const [formAction, setFormAction] = useState<string | null>(null);
-  const screen = bp.screens.find((s) => s.id === screenId) ?? bp.screens[0]!;
+  const tabs = bp.screens.filter((sc) => (sc.kind ?? 'tab') === 'tab');
+  const [tabId, setTabId] = useState(tabs[0]!.id);
+  /** Open detail screens, top last. */
+  const [stack, setStack] = useState<Array<{ screen: string; collection: string; itemId: string }>>([]);
+  const [ui, setUiState] = useState<Record<string, Record<string, Value>>>(() => Object.fromEntries(bp.screens.map((sc) => [sc.id, defaultsFor(sc)])));
+  const [formAction, setFormAction] = useState<{ action: string; opts?: RunOpts } | null>(null);
+  const [confirm, setConfirm] = useState<{ action: string; opts?: RunOpts; text: string } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const compact = density === 'compact';
   const s = useMemo(() => makeStyles(t, compact), [t, compact]);
 
-  const run = (action: string, o?: { collection?: string; itemId?: string; form?: Record<string, RecordValue> }) => {
-    if (bp.actions[action]?.form && !o?.form) {
-      setFormAction(action);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const top = stack[stack.length - 1];
+  const screen = (top ? bp.screens.find((sc) => sc.id === top.screen) : null) ?? tabs.find((sc) => sc.id === tabId) ?? tabs[0]!;
+  const item = top ? (sandbox.rows(top.collection).find((r) => String(r.id) === top.itemId) ?? null) : null;
+  // The record was removed (e.g. "Delete"): leave the detail screen.
+  useEffect(() => {
+    if (top && !item) setStack((st) => st.slice(0, -1));
+  }, [top, item]);
+
+  const execute = (action: string, o?: RunOpts) => {
+    const r = sandbox.run(action, o);
+    if (!r.ok) {
+      setToast('Something went wrong in this test.');
       return;
     }
-    const r = sandbox.run(action, o);
-    if (r.ok && r.navigate) setScreenId(r.navigate);
+    if (r.toast) setToast(r.toast);
+    if (r.back) setStack((st) => st.slice(0, -1));
+    if (r.navigate) {
+      setStack([]);
+      setTabId(r.navigate);
+    }
+  };
+
+  const run = (action: string, o?: RunOpts) => {
+    const def = bp.actions[action];
+    if (!def) return;
+    if (def.form && !o?.form) return setFormAction({ action, opts: o });
+    if (def.confirm) {
+      const itemRow = o?.collection && o.itemId ? sandbox.rows(o.collection).find((r) => String(r.id) === o.itemId) : undefined;
+      return setConfirm({ action, opts: o, text: sandbox.text(def.confirm, itemRow ? { item: itemRow } : {}) });
+    }
+    execute(action, o);
+  };
+
+  const ctx: BlockContext = {
+    sandbox,
+    theme: t,
+    s,
+    compact,
+    topInset,
+    screenTitle: screen.title,
+    viewAs: state.viewAs,
+    ui: ui[screen.id] ?? {},
+    setUi: (name, v) => setUiState((all) => ({ ...all, [screen.id]: { ...(all[screen.id] ?? {}), [name]: v } })),
+    item,
+    collection: top?.collection ?? null,
+    hasBack: !!top && !compact,
+    run,
+    open: (sc, collection, itemId) => setStack((st) => [...st, { screen: sc, collection, itemId }]),
   };
 
   const notice = state.notices[state.notices.length - 1];
   const addButton = screen.blocks.find((b) => b.type === 'addButton');
   const heroFirst = screen.blocks[0]?.type === 'hero' && !compact;
+  const onDetail = !!top;
 
   return (
     <View style={s.root}>
       {banner}
       <ScrollView
+        key={`${screen.id}-${top?.itemId ?? ''}`}
         style={s.flex}
-        contentContainerStyle={{ paddingBottom: compact ? 12 : 120, paddingTop: heroFirst ? 0 : topInset }}
+        contentContainerStyle={{ paddingBottom: compact ? 12 : 120, paddingTop: heroFirst ? 0 : topInset + Math.max(chromeTop, onDetail && !compact ? 52 : 0) }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {screen.blocks.map((b, i) => (
-          <BlockView
-            key={`${screen.id}-${i}`}
-            block={b}
-            sandbox={sandbox}
-            s={s}
-            compact={compact}
-            topInset={topInset}
-            screenTitle={screen.title}
-            run={run}
-            viewAs={state.viewAs}
-          />
+          <BlockView key={`${screen.id}-${i}`} block={b} c={ctx} />
         ))}
       </ScrollView>
+
+      {onDetail ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={() => setStack((st) => st.slice(0, -1))}
+          style={[s.back, { top: compact ? 6 : topInset + 6, backgroundColor: heroFirst ? 'rgba(255,255,255,0.18)' : t.surface }]}
+        >
+          <Icon name="back" size={20} color={heroFirst ? t.onPrimary : t.ink} />
+        </Pressable>
+      ) : null}
 
       {addButton && addButton.type === 'addButton' && !compact ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={addButton.label}
-          onPress={() => run(addButton.action)}
-          style={[s.fab, { bottom: 104 + Math.max(0, bottomInset - 22) }]}
+          onPress={() => run(addButton.action, item && top ? { collection: top.collection, itemId: top.itemId } : undefined)}
+          style={[s.fab, { bottom: (onDetail ? 24 : 104) + Math.max(0, bottomInset - 22) }]}
         >
           <Icon name="plus" size={26} color="#FFFFFF" strokeWidth={2.2} />
         </Pressable>
       ) : null}
 
-      <View style={[s.tabs, !compact && { paddingBottom: Math.max(22, bottomInset) }]} accessibilityRole="tablist">
-        {bp.screens.map((sc) => {
-          const active = sc.id === screen.id;
-          return (
-            <Pressable
-              key={sc.id}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: active }}
-              aria-selected={active}
-              onPress={() => setScreenId(sc.id)}
-              style={s.tab}
-            >
-              {compact ? null : <Icon name={sc.icon} size={22} color={active ? t.primary : t.muted} />}
-              <Text style={[s.tabLabel, active && s.tabLabelActive]}>{sc.title}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {!onDetail ? (
+        <View style={[s.tabs, !compact && { paddingBottom: Math.max(22, bottomInset) }]} accessibilityRole="tablist">
+          {tabs.map((sc) => {
+            const active = sc.id === screen.id;
+            return (
+              <Pressable key={sc.id} accessibilityRole="tab" accessibilityState={{ selected: active }} aria-selected={active} onPress={() => setTabId(sc.id)} style={s.tab}>
+                {compact ? null : <Icon name={sc.icon} size={22} color={active ? t.primary : t.muted} />}
+                <Text style={[s.tabLabel, active && s.tabLabelActive]} numberOfLines={1}>
+                  {sc.title}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+
+      {toast ? (
+        <View pointerEvents="none" style={[s.toast, { bottom: (onDetail ? 24 : 92) + Math.max(0, bottomInset - 22) }]} accessibilityLiveRegion="polite">
+          <Text style={s.toastText}>{toast}</Text>
+        </View>
+      ) : null}
 
       {notice ? (
         <Pressable
@@ -133,15 +192,44 @@ export function Player({ sandbox, density = 'regular', topInset = 0, bottomInset
         </Pressable>
       ) : null}
 
+      {confirm ? (
+        <View style={s.sheetBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setConfirm(null)} accessibilityLabel="Cancel" />
+          <View style={s.sheet} accessibilityViewIsModal>
+            <Text style={s.sheetTitle} accessibilityRole="header">
+              {confirm.text}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable accessibilityRole="button" onPress={() => setConfirm(null)} style={[s.sheetSubmit, { flex: 1, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line }]}>
+                <Text style={[s.cardButtonText, { color: t.ink }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  const c = confirm;
+                  setConfirm(null);
+                  execute(c.action, c.opts);
+                }}
+                style={[s.sheetSubmit, { flex: 1 }]}
+              >
+                <Text style={s.cardButtonText}>Yes</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {formAction ? (
         <FormSheet
           sandbox={sandbox}
-          action={formAction}
+          action={formAction.action}
           s={s}
+          viewAs={state.viewAs}
           onClose={() => setFormAction(null)}
           onSubmit={(values) => {
+            const f = formAction;
             setFormAction(null);
-            run(formAction, { form: values });
+            execute(f.action, { ...f.opts, form: values });
           }}
         />
       ) : null}
@@ -149,210 +237,61 @@ export function Player({ sandbox, density = 'regular', topInset = 0, bottomInset
   );
 }
 
-// ---------------------------------------------------------------- blocks
-
-type Styles = ReturnType<typeof makeStyles>;
-
-function BlockView({
-  block,
-  sandbox,
-  s,
-  compact,
-  topInset,
-  screenTitle,
-  run,
-  viewAs,
-}: {
-  block: Block;
-  sandbox: Sandbox;
-  s: Styles;
-  compact: boolean;
-  topInset: number;
-  screenTitle: string;
-  run: (action: string, o?: { collection?: string; itemId?: string }) => void;
-  viewAs: string;
-}) {
-  const t = sandbox.blueprint.theme;
-  switch (block.type) {
-    case 'hero': {
-      const title = sandbox.text(block.title);
-      if (compact) {
-        return (
-          <View style={s.compactHeader}>
-            <Text style={s.compactTitle} accessibilityRole="header">
-              {screenTitle}
-            </Text>
-            <Text style={s.compactSubtitle}>{title === screenTitle ? sandbox.text(block.eyebrow ?? '') : title}</Text>
-          </View>
-        );
-      }
-      return (
-        <View style={[s.hero, { paddingTop: Math.max(60, topInset + 8) }]}>
-          <View style={{ gap: 2 }}>
-            {block.eyebrow ? <Text style={s.heroEyebrow}>{sandbox.text(block.eyebrow)}</Text> : null}
-            <Text style={s.heroTitle} accessibilityRole="header">
-              {title}
-            </Text>
-          </View>
-          {block.people ? (
-            <View style={s.heroCard}>
-              <Avatars sandbox={sandbox} viewAs={viewAs} ring={t.primary} />
-              <Text style={s.heroCardText}>{sandbox.text(block.people.text)}</Text>
-            </View>
-          ) : null}
-        </View>
-      );
-    }
-    case 'section':
-      return compact ? null : <Text style={s.section}>{sandbox.text(block.text)}</Text>;
-    case 'text':
-      return <Text style={[s.text, block.tone === 'muted' && { color: t.muted }]}>{sandbox.text(block.text)}</Text>;
-    case 'list': {
-      let rows = sandbox.rows(block.collection);
-      if (block.where) rows = rows.filter((item) => isTruthy(sandbox.value(block.where!, { item })));
-      if (block.sortBy) {
-        const key = (item: Record<string, Value>) => sandbox.value(block.sortBy!, { item });
-        rows = [...rows].sort((a, b) => Number(key(a) ?? 0) - Number(key(b) ?? 0));
-      }
-      if (!rows.length && block.empty) return <Text style={[s.text, { color: t.muted }]}>{sandbox.text(block.empty)}</Text>;
-      return (
-        <View style={s.list}>
-          {rows.map((item) => {
-            const btn = block.item.button;
-            const showBtn = btn && (!btn.visible || isTruthy(sandbox.value(btn.visible, { item })));
-            const title = sandbox.text(block.item.title, { item });
-            return (
-              <View key={String(item.id)} style={s.card}>
-                {block.item.icon ? (
-                  <View style={s.cardIcon}>
-                    <Icon name={block.item.icon} size={compact ? 20 : 24} color={t.primary} />
-                  </View>
-                ) : null}
-                <View style={s.cardBody}>
-                  <Text style={s.cardTitle}>{title}</Text>
-                  {block.item.subtitle ? <Text style={s.cardSubtitle}>{sandbox.text(block.item.subtitle, { item })}</Text> : null}
-                </View>
-                {showBtn && btn ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${sandbox.text(btn.label, { item })}: ${title}`}
-                    onPress={() => run(btn.action, { collection: block.collection, itemId: String(item.id) })}
-                    style={({ pressed }) => [s.cardButton, pressed && { opacity: 0.85 }]}
-                  >
-                    {btn.icon && !compact ? <Icon name={btn.icon} size={16} color={t.onPrimary} strokeWidth={2.6} /> : null}
-                    <Text style={s.cardButtonText}>{sandbox.text(btn.label, { item })}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            );
-          })}
-        </View>
-      );
-    }
-    case 'people': {
-      const people = sandbox.blueprint.sample.people;
-      return (
-        <View style={s.list}>
-          {people.map((p) => {
-            const person = { id: p.id, name: p.name };
-            return (
-              <View key={p.id} style={s.card}>
-                <View style={[s.avatarLarge, { backgroundColor: p.color }]}>
-                  <Text style={s.avatarText}>{p.id === viewAs ? 'You' : p.name.slice(0, 1)}</Text>
-                </View>
-                <View style={s.cardBody}>
-                  <Text style={s.cardTitle}>{p.id === viewAs ? `${p.name} (you)` : p.name}</Text>
-                  {block.subtitle ? <Text style={s.cardSubtitle}>{sandbox.text(block.subtitle, { person })}</Text> : null}
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      );
-    }
-    case 'addButton':
-      return null;
-  }
-}
-
-function Avatars({ sandbox, viewAs, ring }: { sandbox: Sandbox; viewAs: string; ring: string }) {
-  const people = sandbox.blueprint.sample.people;
-  const ordered = [...people.filter((p) => p.id !== viewAs), ...people.filter((p) => p.id === viewAs)];
-  return (
-    <View style={{ flexDirection: 'row' }} accessibilityLabel={`${people.length} people`}>
-      {ordered.map((p, i) => (
-        <View
-          key={p.id}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: p.color,
-            borderWidth: 2,
-            borderColor: ring,
-            marginLeft: i === 0 ? 0 : -8,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ fontFamily: PLAYER_FONTS.semibold, fontSize: 13, color: sandbox.blueprint.theme.ink }}>
-            {p.id === viewAs ? 'You' : p.name.slice(0, 1)}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
+function initialValue(f: Field): RecordValue {
+  if (f.type === 'bool') return false;
+  if (f.type === 'date') return Date.now();
+  if (f.type === 'number') return f.min ?? null;
+  if (f.type === 'choice') return f.options?.[0] ?? null;
+  return '';
 }
 
 function FormSheet({
   sandbox,
   action,
   s,
+  viewAs,
   onClose,
   onSubmit,
 }: {
   sandbox: Sandbox;
   action: string;
   s: Styles;
+  viewAs: string;
   onClose: () => void;
   onSubmit: (values: Record<string, RecordValue>) => void;
 }) {
   const form = sandbox.blueprint.actions[action]!.form!;
-  const [values, setValues] = useState<Record<string, string>>({});
-  const missing = Object.entries(form.fields).some(([k, f]) => f.required && !values[k]?.trim());
-  const submit = () => {
-    const out: Record<string, RecordValue> = {};
-    for (const [k, f] of Object.entries(form.fields)) {
-      const raw = values[k]?.trim() ?? '';
-      out[k] = f.type === 'number' ? (raw === '' ? null : Number(raw.replace(',', '.')) || null) : raw;
-    }
-    onSubmit(out);
-  };
+  const t = sandbox.blueprint.theme;
+  const [values, setValues] = useState<Record<string, RecordValue>>(() =>
+    Object.fromEntries(Object.entries(form.fields).map(([k, f]) => [k, f.type === 'member' ? viewAs : initialValue(f)])),
+  );
+  const missing = Object.entries(form.fields).some(([k, f]) => f.required && (values[k] === null || String(values[k]).trim() === ''));
   return (
     <View style={s.sheetBackdrop}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
-      <View style={s.sheet} accessibilityViewIsModal>
+      <View style={[s.sheet, { maxHeight: '88%' }]} accessibilityViewIsModal>
         <Text style={s.sheetTitle} accessibilityRole="header">
           {form.title}
         </Text>
-        {Object.entries(form.fields).map(([k, f]) => (
-          <View key={k} style={{ gap: 6 }}>
-            <Text style={s.sheetLabel}>{f.label}</Text>
-            <TextInput
-              value={values[k] ?? ''}
-              onChangeText={(v) => setValues((cur) => ({ ...cur, [k]: v.slice(0, 200) }))}
-              keyboardType={f.type === 'number' ? 'numeric' : 'default'}
-              style={s.sheetInput}
-              accessibilityLabel={f.label}
-              maxLength={200}
+        <ScrollView contentContainerStyle={{ gap: 14 }} keyboardShouldPersistTaps="handled">
+          {Object.entries(form.fields).map(([k, f]) => (
+            <FieldEditor
+              key={k}
+              field={f}
+              label={f.label}
+              value={values[k] ?? null}
+              onChange={(v) => setValues((cur) => ({ ...cur, [k]: v }))}
+              theme={t}
+              people={sandbox.blueprint.sample.people}
+              meId={viewAs}
             />
-          </View>
-        ))}
+          ))}
+        </ScrollView>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: missing }}
           disabled={missing}
-          onPress={submit}
+          onPress={() => onSubmit(values)}
           style={[s.sheetSubmit, missing && { opacity: 0.4 }]}
         >
           <Text style={s.cardButtonText}>{form.submit}</Text>
@@ -362,174 +301,5 @@ function FormSheet({
   );
 }
 
-// ---------------------------------------------------------------- styles
-
-function makeStyles(t: Theme, compact: boolean) {
-  const F = PLAYER_FONTS;
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.background, overflow: 'hidden' },
-    flex: { flex: 1 },
-    hero: {
-      backgroundColor: t.primary,
-      paddingHorizontal: 20,
-      paddingBottom: 24,
-      gap: 16,
-      borderBottomLeftRadius: 28,
-      borderBottomRightRadius: 28,
-    },
-    heroEyebrow: { fontFamily: F.body, fontSize: 14, color: mix(t.onPrimary, t.primary, 0.78) },
-    heroTitle: { fontFamily: F.display, fontSize: 32, letterSpacing: -0.64, color: t.onPrimary },
-    heroCard: {
-      backgroundColor: 'rgba(255,255,255,0.14)',
-      borderRadius: 18,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    heroCardText: { flex: 1, fontFamily: F.body, fontSize: 14, lineHeight: 19, color: t.onPrimary },
-    compactHeader: { paddingTop: 16, paddingHorizontal: 16, gap: 2 },
-    compactTitle: { fontFamily: F.display, fontSize: 26, letterSpacing: -0.52, color: t.ink },
-    compactSubtitle: { fontFamily: F.body, fontSize: 13, color: t.muted },
-    section: {
-      fontFamily: F.semibold,
-      fontSize: 13,
-      color: t.muted,
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      paddingBottom: 0,
-    },
-    text: { fontFamily: F.body, fontSize: 15, color: t.ink, paddingHorizontal: 20, paddingTop: 12 },
-    list: { paddingHorizontal: compact ? 12 : 16, paddingTop: compact ? 12 : 10, gap: compact ? 8 : 10 },
-    card: {
-      backgroundColor: t.surface,
-      borderRadius: compact ? 16 : 20,
-      paddingVertical: compact ? 10 : 12,
-      paddingRight: compact ? 10 : 12,
-      paddingLeft: compact ? 12 : 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: compact ? 10 : 12,
-    },
-    cardIcon: {
-      width: compact ? 38 : 48,
-      height: compact ? 38 : 48,
-      borderRadius: compact ? 12 : 14,
-      backgroundColor: t.tint,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cardBody: { flex: 1, minWidth: 0, gap: compact ? 2 : 3 },
-    cardTitle: { fontFamily: F.semibold, fontSize: compact ? 15 : 17, color: t.ink },
-    cardSubtitle: { fontFamily: F.body, fontSize: compact ? 12 : 13, color: t.muted },
-    cardButton: {
-      height: compact ? 36 : 44,
-      paddingHorizontal: compact ? 12 : 16,
-      borderRadius: compact ? 18 : 22,
-      backgroundColor: t.primary,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    cardButtonText: { fontFamily: F.semibold, fontSize: compact ? 13 : 14, color: t.onPrimary },
-    avatarLarge: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-    avatarText: { fontFamily: F.semibold, fontSize: 15, color: t.ink },
-    fab: {
-      position: 'absolute',
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: t.ink,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: t.ink,
-      shadowOpacity: 0.25,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 6,
-    },
-    tabs: {
-      flexDirection: 'row',
-      backgroundColor: t.surface,
-      borderTopWidth: 1,
-      borderTopColor: t.line,
-      paddingTop: compact ? 8 : 6,
-      paddingBottom: compact ? 10 : 22,
-      paddingHorizontal: compact ? 0 : 8,
-    },
-    tab: {
-      flex: 1,
-      height: compact ? undefined : 52,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      minHeight: compact ? 20 : 44,
-    },
-    tabLabel: { fontFamily: F.body, fontSize: 11, color: t.muted },
-    tabLabelActive: { fontFamily: F.semibold, color: t.primary },
-    notice: {
-      position: 'absolute',
-      left: 10,
-      right: 10,
-      backgroundColor: 'rgba(20,20,20,0.92)',
-      borderRadius: 18,
-      padding: 12,
-      flexDirection: 'row',
-      gap: 10,
-      alignItems: 'center',
-    },
-    noticeIcon: {
-      width: 30,
-      height: 30,
-      borderRadius: 8,
-      backgroundColor: t.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    noticeApp: { fontFamily: F.semibold, fontSize: 12, color: '#B4B4AD' },
-    noticeText: { fontFamily: F.body, fontSize: 14, color: '#F4F4EF' },
-    sheetBackdrop: {
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.35)',
-      justifyContent: 'flex-end',
-    },
-    sheet: {
-      backgroundColor: t.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      paddingBottom: 32,
-      gap: 14,
-    },
-    sheetTitle: { fontFamily: F.display, fontSize: 22, letterSpacing: -0.44, color: t.ink },
-    sheetLabel: { fontFamily: F.medium, fontSize: 14, color: t.muted },
-    sheetInput: {
-      height: 48,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: t.line,
-      paddingHorizontal: 14,
-      fontFamily: F.body,
-      fontSize: 16,
-      color: t.ink,
-      backgroundColor: t.background,
-    },
-    sheetSubmit: {
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: t.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 4,
-    },
-  });
-}
-
-/** Blend two hex colors (used for subtle text on the primary color). */
-function mix(a: string, b: string, w: number) {
-  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
-  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-  return `rgb(${pa.map((v, i) => Math.round(v * w + pb[i]! * (1 - w))).join(',')})`;
-}
+// Keep the font names exported from here for existing imports.
+export const FONTS = PLAYER_FONTS;

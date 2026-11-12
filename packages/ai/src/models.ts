@@ -1,6 +1,7 @@
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { initChatModel } from 'langchain/chat_models/universal';
+import { SystemMessage } from '@langchain/core/messages';
 
 /**
  * Which model runs each pipeline step. Picked by configuration, not code, so any
@@ -63,3 +64,14 @@ export const PRICES: Record<string, { input: number; output: number; cacheRead: 
   'claude-sonnet-5-5': { input: 2, output: 10, cacheRead: 0.1 },
   'claude-haiku-5-5': { input: 0.1, output: 0.5, cacheRead: 0.01 },
 };
+
+/**
+ * A system message for a step. On Anthropic models the (long, stable) system prompt is
+ * marked for prompt caching, so repair and change turns reread it at a fraction of the price.
+ */
+export function systemFor(role: Role, text: string): SystemMessage {
+  if (modelSpec(role).id.startsWith('anthropic:')) {
+    return new SystemMessage({ content: [{ type: 'text', text, cache_control: { type: 'ephemeral' } }] as never });
+  }
+  return new SystemMessage(text);
+}

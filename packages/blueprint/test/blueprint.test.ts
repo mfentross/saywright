@@ -6,6 +6,7 @@ import {
   evaluate,
   ExprError,
   thirsty,
+  runclub,
   validateBlueprint,
   smokeTest,
   type EvalHost,
@@ -126,7 +127,7 @@ describe('Thirsty in the sandbox', () => {
 
   it('"Watered" marks a plant done and updates headline and turn line', () => {
     const sb = make();
-    expect(sb.run('water', { collection: 'plants', itemId: 'pilea' })).toEqual({ ok: true, navigate: undefined });
+    expect(sb.run('water', { collection: 'plants', itemId: 'pilea' })).toMatchObject({ ok: true });
     expect(status(sb).Pilea).toBe('Watered just now by you · next turn: Jonas');
     expect(hero(sb).title).toBe('1 plant is thirsty');
     expect(hero(sb).turn).toBe('You’re done for today. Jonas is up next.');
@@ -180,5 +181,55 @@ describe('smoke test', () => {
     for (let i = 0; i < 30; i++) bad.sample.records.plants.push({ id: `p${i}`, name: `P${i}`, everyDays: 3, lastWatered: '@now', lastWateredBy: 'lea', turn: 'lea' });
     const issues = smokeTest(Blueprint.parse(bad));
     expect(issues.some((i) => i.path === 'collections.plants.computed.heavy' && /step budget/.test(i.message))).toBe(true);
+  });
+});
+
+describe('Run Club (every building block)', () => {
+  const fixed = new Date(2026, 10, 5, 12, 0, 0).getTime();
+  const bp = () => Blueprint.parse(runclub);
+
+  it('validates and passes the smoke test', () => {
+    expect(validateBlueprint(runclub).issues).toEqual([]);
+    expect(smokeTest(bp(), { now: fixed })).toEqual([]);
+  });
+
+  it('uses every block type', () => {
+    const used = new Set(bp().screens.flatMap((s) => s.blocks.map((b) => b.type)));
+    const all = Blueprint.shape.screens.element.shape.blocks.element.options.map((o: any) => o.shape.type.value);
+    expect([...all].filter((t) => !used.has(t))).toEqual([]);
+  });
+
+  it('edits fields with type coercion and limits', () => {
+    const sb = createSandbox(bp(), { now: () => fixed });
+    expect(sb.setField('runs', 'r1', 'km', '72')).toMatchObject({ ok: true });
+    expect(sb.rows('runs').find((r) => r.id === 'r1')?.km).toBe(50); // clamped to max
+    sb.setField('runs', 'r1', 'kind', 'Sprint'); // not an option
+    expect(sb.rows('runs').find((r) => r.id === 'r1')?.kind).toBe('Easy');
+    sb.toggle('runs', 'r5', 'done');
+    expect(sb.rows('runs').find((r) => r.id === 'r5')?.done).toBe(true);
+    expect(sb.setField('runs', 'r1', 'nope', 1)).toMatchObject({ ok: false });
+  });
+
+  it('filters with screen state and runs confirm/toast/back actions', () => {
+    const sb = createSandbox(bp(), { now: () => fixed });
+    const list = bp().screens[1]!.blocks.find((b) => b.type === 'list')!;
+    if (list.type !== 'list') throw new Error();
+    const visible = (ui: Record<string, unknown>) =>
+      sb.rows('runs').filter((item) => sb.value(list.where!, { item, ui: ui as any })).map((r) => r.id);
+    expect(visible({ q: '', kind: 'All', mine: false })).toHaveLength(5);
+    expect(visible({ q: '', kind: 'Tempo', mine: false })).toEqual(['r2', 'r3']);
+    expect(visible({ q: 'hill', kind: 'All', mine: false })).toEqual(['r3']);
+    expect(visible({ q: '', kind: 'All', mine: true })).toEqual(['r2', 'r4']);
+    const r = sb.run('deleteRun', { collection: 'runs', itemId: 'r3' });
+    expect(r).toMatchObject({ ok: true, back: true, toast: 'Run deleted' });
+    expect(sb.rows('runs').map((x) => x.id)).not.toContain('r3');
+  });
+
+  it('rejects a detail screen used without a record and field editors on tab screens', () => {
+    const bad = structuredClone(runclub) as any;
+    bad.screens[0].blocks.push({ type: 'field', field: 'km' });
+    bad.actions.addRun.steps.push({ navigate: 'run' });
+    const paths = validateBlueprint(bad).issues.map((i) => i.path);
+    expect(paths).toEqual(expect.arrayContaining(['screens.0.blocks.6', 'actions.addRun.steps.2.navigate']));
   });
 });

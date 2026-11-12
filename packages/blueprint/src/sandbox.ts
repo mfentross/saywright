@@ -54,9 +54,13 @@ export interface Sandbox {
   advance(ms: number): void;
   setViewAs(personId: string): void;
   dismissNotice(id: number): void;
+  /** Sets one field of a record (detail-screen editors). Values are coerced to the field's type. */
+  setField(collection: string, itemId: string, field: string, value: RecordValue): RunResult;
+  /** Flips a bool field (list tick boxes). */
+  toggle(collection: string, itemId: string, field: string): RunResult;
 }
 
-export type RunResult = { ok: true; navigate?: string } | { ok: false; error: string };
+export type RunResult = { ok: true; navigate?: string; back?: boolean; toast?: string } | { ok: false; error: string };
 
 export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}): Sandbox {
   const realNow = opts.now ?? (() => Date.now());
@@ -172,6 +176,8 @@ export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}):
     let records = { ...state.records };
     const notices = [...state.notices];
     let navigate: string | undefined;
+    let back = false;
+    let toast: string | undefined;
     const itemRow = o.collection && o.itemId ? rows(o.collection).find((r) => r.id === o.itemId) : undefined;
     const locals: Record<string, Value> = { form: (o.form ?? {}) as Value };
     if (itemRow) locals.item = itemRow;
@@ -199,6 +205,10 @@ export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}):
           records = { ...records, [o.collection]: (records[o.collection] ?? []).filter((r) => r.id !== o.itemId) };
         } else if ('navigate' in step) {
           navigate = step.navigate;
+        } else if ('toast' in step) {
+          toast = renderTemplate(step.toast, makeHost(locals), locals).slice(0, 140);
+        } else if ('back' in step) {
+          back = true;
         } else if ('notify' in step) {
           const to = String(evaluate(step.notify.to, makeHost(locals), locals) ?? '');
           notices.push({ id: noticeSeq++, to, text: renderTemplate(step.notify.text, makeHost(locals), locals), at: now() });
@@ -208,7 +218,7 @@ export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}):
       return { ok: false, error: e instanceof Error ? e.message : 'Action failed' };
     }
     commit({ records, notices: notices.slice(-5) });
-    return { ok: true, navigate };
+    return { ok: true, navigate, back, toast };
   }
 
   /** Fires scheduled notifications that fall between `from` and `to` (simulated time). */
@@ -272,8 +282,45 @@ export function createSandbox(bp: Blueprint, opts: { now?: () => number } = {}):
     setViewAs(personId) {
       if (bp.sample.people.some((p) => p.id === personId)) commit({ viewAs: personId });
     },
+    setField(collection, itemId, field, value) {
+      const f = bp.collections[collection]?.fields[field];
+      if (!f) return { ok: false, error: `Unknown field "${field}"` };
+      const v = coerce(f, value);
+      const list = state.records[collection] ?? [];
+      if (!list.some((r) => r.id === itemId)) return { ok: false, error: 'Record not found' };
+      commit({ records: { ...state.records, [collection]: list.map((r) => (r.id === itemId ? { ...r, [field]: v } : r)) } });
+      return { ok: true };
+    },
+    toggle(collection, itemId, field) {
+      const row = (state.records[collection] ?? []).find((r) => r.id === itemId);
+      if (!row) return { ok: false, error: 'Record not found' };
+      return this.setField(collection, itemId, field, !row[field]);
+    },
     dismissNotice(nid) {
       commit({ notices: state.notices.filter((n) => n.id !== nid) });
     },
   };
+}
+
+/** Coerces an edited value to a field's type and limits. */
+export function coerce(f: { type: string; min?: number; max?: number; options?: string[] }, value: RecordValue): RecordValue {
+  switch (f.type) {
+    case 'number': {
+      let n = typeof value === 'number' ? value : Number(String(value ?? '').replace(',', '.'));
+      if (!Number.isFinite(n)) return null;
+      if (f.min !== undefined) n = Math.max(f.min, n);
+      if (f.max !== undefined) n = Math.min(f.max, n);
+      return n;
+    }
+    case 'bool':
+      return !!value;
+    case 'date':
+      return typeof value === 'number' ? value : typeof value === 'string' && !Number.isNaN(Date.parse(value)) ? Date.parse(value) : null;
+    case 'choice':
+      return f.options?.includes(String(value)) ? String(value) : (f.options?.[0] ?? null);
+    case 'member':
+      return value === null ? null : String(value);
+    default:
+      return value === null ? '' : String(value).slice(0, 2000);
+  }
 }

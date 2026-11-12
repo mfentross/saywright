@@ -255,6 +255,7 @@ interface Ctx {
 
 const DAY = 86_400_000;
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function tick(ctx: Ctx) {
   if (++ctx.budget.steps > ctx.budget.limit) throw new BudgetExceeded();
@@ -305,7 +306,7 @@ function startOfDay(ms: number) {
 }
 
 /** Functions whose arguments are evaluated per list element, with `it` bound. */
-const LAZY = new Set(['count', 'filter', 'find', 'map', 'any', 'all', 'sortBy']);
+const LAZY = new Set(['count', 'filter', 'find', 'map', 'any', 'all', 'sortBy', 'sum', 'avg']);
 
 /** All function names a blueprint may use. Anything else is rejected at validation. */
 export const FUNCTIONS = [
@@ -330,6 +331,8 @@ export const FUNCTIONS = [
   'max',
   'round',
   'coalesce',
+  'formatDate',
+  'daysUntil',
 ] as const;
 
 const FUNCTION_SET = new Set<string>(FUNCTIONS);
@@ -432,6 +435,10 @@ function call(n: Extract<Node, { k: 'call' }>, ctx: Ctx): Value {
         return src.some((it) => truthy(each(it)));
       case 'all':
         return src.every((it) => truthy(each(it)));
+      case 'sum':
+        return src.reduce<number>((t, it) => t + num(each(it)), 0);
+      case 'avg':
+        return src.length ? src.reduce<number>((t, it) => t + num(each(it)), 0) / src.length : 0;
       case 'sortBy': {
         const keyed = src.map((it) => ({ it, key: each(it) }));
         keyed.sort((a, b) => {
@@ -465,6 +472,23 @@ function call(n: Extract<Node, { k: 'call' }>, ctx: Ctx): Value {
     case 'weekday': {
       const d = date(a[0] ?? host.now());
       return d === null ? '' : WEEKDAYS[new Date(d).getDay()]!;
+    }
+    case 'formatDate': {
+      const d = date(a[0]);
+      if (d === null) return '';
+      const style = str(a[1] ?? 'short');
+      const dt = new Date(d);
+      const day = `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
+      const time = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+      if (style === 'time') return time;
+      if (style === 'long') return `${WEEKDAYS[dt.getDay()]}, ${day}`;
+      if (style === 'datetime') return `${day}, ${time}`;
+      return day;
+    }
+    case 'daysUntil': {
+      const d = date(a[0]);
+      if (d === null) return 9999;
+      return Math.floor((startOfDay(d) - startOfDay(host.now())) / DAY);
     }
     case 'isToday': {
       const d = date(a[0]);

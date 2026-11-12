@@ -7,7 +7,7 @@ export const starterIdeas = ['Habit tracker', 'Shared shopping list', 'Booking p
 export const sampleIdea =
   'An app where my flatmates and I can see which plants need water, and it pings whoever’s turn it is.';
 
-export const draft = { name: 'Gym timer', status: 'Testing · version 2' };
+export const draft = { name: 'Run Club', status: 'Testing · version 2' };
 
 export const plan = {
   name: 'Thirsty',
@@ -84,7 +84,7 @@ export const library = {
     { name: 'Studio booking', status: 'v4 · changes plan', icon: 'calendar' as IconKey, bg: '#3446C7', fg: '#FFFFFF' },
   ],
   testing: [
-    { name: 'Gym timer', status: 'Testing · v2', icon: 'clock' as IconKey, action: 'Test' },
+    { name: 'Run Club', status: 'Testing · v2', icon: 'clock' as IconKey, action: 'Test' },
     { name: 'Recipe box', status: 'Building', icon: 'book' as IconKey },
   ],
 };

@@ -1,7 +1,7 @@
 import { Annotation, Command, END, interrupt, MemorySaver, START, StateGraph, type BaseCheckpointSaver } from '@langchain/langgraph';
 import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from '@langchain/core/messages';
 import { smokeTest, validateBlueprint, type Issue } from '@saywright/blueprint';
-import { createModel, modelSpec, type ModelFactory, type Role } from './models';
+import { createModel, modelSpec, systemFor, type ModelFactory, type Role } from './models';
 import { PLAN_SYSTEM, repairUserMessage, SCREEN_SYSTEM, WRITE_SYSTEM, writeUserMessage } from './prompts';
 import { parseJsonObject, textOf } from './json';
 
@@ -146,7 +146,7 @@ export function buildGenerationGraph(opts: { models?: ModelFactory; checkpointer
     const m = await models('write');
     const first = s.messages.length === 0;
     const turn = first
-      ? [new SystemMessage(WRITE_SYSTEM), new HumanMessage(writeUserMessage({ idea: s.idea, plan: s.plan, answer: s.answer }))]
+      ? [systemFor('write', WRITE_SYSTEM), new HumanMessage(writeUserMessage({ idea: s.idea, plan: s.plan, answer: s.answer }))]
       : [new HumanMessage(repairUserMessage(s.issues))];
     // The whole conversation (including the model's own earlier replies, unchanged) is replayed.
     const msg = (await m.invoke([...s.messages, ...turn])) as AIMessage;

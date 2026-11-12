@@ -19,7 +19,7 @@ export default function FullscreenTest() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Player key={key} sandbox={sandbox} topInset={top} bottomInset={insets.bottom} />
+      <Player key={key} sandbox={sandbox} topInset={top} bottomInset={insets.bottom} chromeTop={48} />
 
       <Pressable
         accessibilityRole="button"

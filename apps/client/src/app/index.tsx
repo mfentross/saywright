@@ -5,6 +5,7 @@ import { Body, Card, Chip, ChipRow, H1, IconButton, IconTile, Logo, Mono, PillBu
 import { color, font, space } from '../theme/tokens';
 import { draft, starterIdeas } from '../data/mock';
 import { flow, useFlow } from '../data/store';
+import { loadExample } from '../data/sandbox';
 
 export default function Create() {
   const { idea } = useFlow();
@@ -68,7 +69,10 @@ export default function Create() {
       <View style={{ paddingHorizontal: space.side, paddingTop: 24, gap: 10 }}>
         <SectionLabel>Pick up where you left off</SectionLabel>
         <Card
-          onPress={() => router.push('/test-drive')}
+          onPress={() => {
+            loadExample('runclub');
+            router.push('/test-drive');
+          }}
           accessibilityLabel={`${draft.name}, ${draft.status}. Continue`}
           style={{ paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
         >

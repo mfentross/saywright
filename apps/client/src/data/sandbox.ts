@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { Blueprint, createSandbox, thirsty, validateBlueprint, type Sandbox } from '@saywright/blueprint';
+import { Blueprint, createSandbox, runclub, thirsty, validateBlueprint, type Sandbox } from '@saywright/blueprint';
 
 /**
  * The sandbox for the app currently being tested. Shared by the inline preview
@@ -17,6 +17,11 @@ export function loadBlueprint(input: unknown): void {
   current = createSandbox(r.blueprint);
   generation++;
   listeners.forEach((l) => l());
+}
+
+/** Demo apps that ship with the client (no server needed). */
+export function loadExample(name: 'thirsty' | 'runclub'): void {
+  loadBlueprint(name === 'runclub' ? runclub : thirsty);
 }
 
 function subscribe(l: () => void) {

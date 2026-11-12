@@ -17,3 +17,4 @@ export {
   type EvalHost,
 } from './expr';
 export { thirsty } from './examples/thirsty';
+export { runclub } from './examples/runclub';

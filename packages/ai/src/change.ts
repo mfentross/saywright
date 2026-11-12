@@ -1,7 +1,7 @@
 import { Annotation, END, MemorySaver, START, StateGraph, type BaseCheckpointSaver } from '@langchain/langgraph';
 import { HumanMessage, SystemMessage, type AIMessage, type BaseMessage } from '@langchain/core/messages';
 import { smokeTest, validateBlueprint, type Issue } from '@saywright/blueprint';
-import { createModel, type ModelFactory } from './models';
+import { createModel, systemFor, type ModelFactory } from './models';
 import { CHANGE_SYSTEM, changeRepairMessage, changeUserMessage, SCREEN_SYSTEM } from './prompts';
 import { parseJsonObject, textOf } from './json';
 import { applyPatch, isPatch, PatchError } from './patch';
@@ -57,7 +57,7 @@ export function buildChangeGraph(opts: { models?: ModelFactory; checkpointer?: B
     const m = await models('write');
     const turn =
       s.messages.length === 0
-        ? [new SystemMessage(CHANGE_SYSTEM), new HumanMessage(changeUserMessage({ blueprint: s.base, request: s.request }))]
+        ? [systemFor('write', CHANGE_SYSTEM), new HumanMessage(changeUserMessage({ blueprint: s.base, request: s.request }))]
         : [new HumanMessage(changeRepairMessage(s.issues))];
     const msg = (await m.invoke([...s.messages, ...turn])) as AIMessage;
     const r = refused(msg);

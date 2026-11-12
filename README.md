@@ -5,6 +5,7 @@ Saywright builds, reviews, hosts and publishes it.
 
 - Plan: [docs/PLAN.md](docs/PLAN.md)
 - Safety & security: [docs/SECURITY.md](docs/SECURITY.md)
+- Building blocks for generated apps: [docs/BLOCKS.md](docs/BLOCKS.md)
 - Design handoff: [docs/HANDOFF.md](docs/HANDOFF.md), screens in [docs/design](docs/design)
 
 ## Repo layout
@@ -64,6 +65,8 @@ Real:
 - Validator with repair-friendly error paths, forbidden-field checks
 - Sandbox: sample data, reset, view as another person, fast-forward time, simulated notifications
 - Thirsty running from its blueprint inline (Test drive) and fullscreen
+- Full building-block library (docs/BLOCKS.md): stats, progress, charts, calendar, timer, search/filters,
+  tick boxes, detail screens with field editors, buttons, confirmations, toasts; Run Club demo uses all of them
 - All 9 screens with design tokens, copy and interactions from the handoff
 - Fastify API: projects stored in libSQL, builds run the AI pipeline, live progress over SSE,
   clarifying question + answer, versions
